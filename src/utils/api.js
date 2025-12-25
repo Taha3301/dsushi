@@ -3,7 +3,7 @@ const PROD_URL = "https://dsushi-be.onrender.com";
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const API_BASE_URL = isLocal ? "" : PROD_URL;
 
-export const API_BASE = API_BASE_URL;
+export const API_BASE = API_BASE_URL; // Base URL configuration
 
 // Proxy is enabled if we are on localhost
 export const useProxy = isLocal;
