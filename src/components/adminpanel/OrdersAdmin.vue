@@ -23,6 +23,82 @@
       </div>
     </section>
 
+    <!-- Stock Requirements Dashboard -->
+    <section v-if="stockData" class="bg-indigo-900 text-white py-8">
+      <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h2 class="text-2xl font-bold">Besoins de Stock (Temps Réel)</h2>
+            <p class="text-indigo-200 text-sm mt-1">Estimations basées sur {{ stockData.totalPendingOrders }} commande(s) en attente</p>
+          </div>
+          <button @click="fetchStockRequirements" class="self-start md:self-auto bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Actualiser
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- KPI Cards -->
+          <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Rouleaux Totaux</div>
+              <div class="text-3xl font-bold">{{ stockData.totalRollouts }}</div>
+            </div>
+             <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Groupes Complets ({{ stockData.preciseGroups.toFixed(2) }})</div>
+              <div class="text-3xl font-bold">{{ stockData.fullGroups }}</div>
+              <div class="text-xs text-indigo-300 mt-1">+ Reste: {{ stockData.remainder }}</div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Articles Commandés</div>
+              <div class="text-3xl font-bold">{{ stockData.totalItemsOrdered }}</div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Commandes en Attente</div>
+              <div class="text-3xl font-bold">{{ stockData.totalPendingOrders }}</div>
+            </div>
+          </div>
+
+          <!-- Ingredients Table -->
+          <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden text-gray-900 flex flex-col">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <h3 class="font-bold text-lg">Ingrédients Requis</h3>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Arrondi Supérieur</span>
+            </div>
+            <div class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-6 flex-1">
+              <div v-for="(data, name) in stockData.ingredientsRoundedUp" :key="name" class="flex flex-col">
+                <span class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">{{ translateIngredient(name) }}</span>
+                <span class="text-2xl font-bold text-gray-800">{{ data.amount }} <span class="text-sm font-normal text-gray-600">{{ data.unit }}</span></span>
+                <span class="text-xs text-gray-400 mt-1">Précis: {{ stockData.ingredientsPrecise[name]?.amount }} {{ stockData.ingredientsPrecise[name]?.unit }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Products Breakdown -->
+          <div class="bg-white rounded-xl shadow-lg overflow-hidden text-gray-900 flex flex-col">
+             <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+              <h3 class="font-bold text-lg">Détail par Produit</h3>
+            </div>
+            <div class="overflow-y-auto max-h-[300px] divide-y divide-gray-100">
+              <div v-for="p in stockData.perProduct" :key="p.productId" class="px-6 py-3 hover:bg-gray-50 transition-colors flex justify-between items-center">
+                <div>
+                  <div class="font-medium text-gray-900">{{ p.productName }}</div>
+                  <div class="text-xs text-gray-500">{{ p.totalQuantity }} article(s)</div>
+                </div>
+                <div class="text-right">
+                   <div class="font-bold text-indigo-600">{{ p.totalRollouts }}</div>
+                   <div class="text-[10px] uppercase text-gray-400 font-bold">Rouleaux</div>
+                </div>
+              </div>
+              <div v-if="stockData.perProduct.length === 0" class="px-6 py-8 text-center text-gray-500 text-sm">
+                Aucun produit à préparer
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Content -->
     <section class="py-4 sm:py-6 md:py-8">
       <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 space-y-4 sm:space-y-6">
@@ -436,6 +512,27 @@ const isDeletingOrder = ref({})
 const showDeleteModal = ref(false)
 const orderToDelete = ref(null)
 
+// Stock Data
+const stockData = ref(null)
+
+const fetchStockRequirements = async () => {
+    try {
+        const res = await fetch(api('/api/Admin/stock/requirements'), {
+            headers: { 
+                'accept': '*/*',
+                'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
+            }
+        })
+        if (res.ok) {
+            stockData.value = await res.json()
+        }
+    } catch (e) {
+        console.error('Error fetching stock requirements:', e)
+    }
+}
+
+onMounted(fetchStockRequirements)
+
 // Status change confirmation state
 const showStatusModal = ref(false)
 const statusChangeData = ref({ orderId: null, oldStatus: '', newStatus: '' })
@@ -740,6 +837,26 @@ function getStatusLabel(status) {
     'Cancelled': 'Annulée'
   }
   return statusMap[status] || status
+}
+
+function translateIngredient(name) {
+  const map = {
+    'rice': 'Riz',
+    'water': 'Eau',
+    'vinegar': 'Vinaigre',
+    'sugar': 'Sucre',
+    'salt': 'Sel',
+    'salmon': 'Saumon',
+    'tuna': 'Thon',
+    'avocado': 'Avocat',
+    'cucumber': 'Concombre',
+    'nori': 'Feuille Nori',
+    'sesame': 'Sésame',
+    'ginger': 'Gingembre',
+    'wasabi': 'Wasabi',
+    'soy_sauce': 'Sauce Soja'
+  }
+  return map[name.toLowerCase()] || name
 }
 
 // Get status badge class

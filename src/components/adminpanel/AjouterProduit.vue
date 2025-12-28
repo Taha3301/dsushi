@@ -376,24 +376,25 @@ const handleSubmit = async () => {
       resetForm()
     } else {
       // Update existing product
-      const body = {
-        productId: editingId.value,
-        name: form.name.trim(),
-        description: form.description?.trim() || '',
-        price: form.price,
-        stock: form.stock,
-        categoryId: form.categoryId,
-        category: null,
-        imageUrls: []
+      const fd = new FormData()
+      fd.append('Name', form.name.trim())
+      fd.append('Description', form.description?.trim() || '')
+      fd.append('Price', String(form.price))
+      fd.append('Stock', String(form.stock))
+      fd.append('CategoryId', form.categoryId)
+
+      // Append new image files
+      for (const f of files.value) {
+        fd.append('Images', f)
       }
+
       const res = await fetch(api(`/api/Product/${editingId.value}`), {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json',
           'accept': '*/*',
           'Authorization': user.value?.token ? `Bearer ${user.value.token}` : '' 
         },
-        body: JSON.stringify(body)
+        body: fd
       })
       if (!res.ok) {
         const errorText = await res.text()
