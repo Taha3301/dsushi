@@ -44,6 +44,11 @@
               <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Rouleaux Totaux</div>
               <div class="text-3xl font-bold">{{ stockData.totalRollouts }}</div>
             </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">CA en Attente</div>
+              <div class="text-3xl font-bold" v-if="pendingTotalData">{{ pendingTotalData.totalPendingAmount }} DT</div>
+              <div class="text-3xl font-bold" v-else>...</div>
+            </div>
              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Groupes Complets ({{ stockData.preciseGroups.toFixed(2) }})</div>
               <div class="text-3xl font-bold">{{ stockData.fullGroups }}</div>
@@ -68,8 +73,11 @@
             <div class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-6 flex-1">
               <div v-for="(data, name) in stockData.ingredientsRoundedUp" :key="name" class="flex flex-col">
                 <span class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">{{ translateIngredient(name) }}</span>
-                <span class="text-2xl font-bold text-gray-800">{{ data.amount }} <span class="text-sm font-normal text-gray-600">{{ data.unit }}</span></span>
-                <span class="text-xs text-gray-400 mt-1">Précis: {{ stockData.ingredientsPrecise[name]?.amount }} {{ stockData.ingredientsPrecise[name]?.unit }}</span>
+                <span class="text-2xl font-bold text-gray-800">
+                  {{ stockData.ingredientsPrecise[name]?.amount }} 
+                  <span class="text-sm font-normal text-gray-600">{{ stockData.ingredientsPrecise[name]?.unit }}</span>
+                </span>
+                <span class="text-xs text-green-600 font-bold mt-1">Arrondi: {{ data.amount }} {{ data.unit }}</span>
               </div>
             </div>
           </div>
@@ -514,6 +522,7 @@ const orderToDelete = ref(null)
 
 // Stock Data
 const stockData = ref(null)
+const pendingTotalData = ref(null)
 
 const fetchStockRequirements = async () => {
     try {
@@ -531,7 +540,26 @@ const fetchStockRequirements = async () => {
     }
 }
 
-onMounted(fetchStockRequirements)
+const fetchPendingTotal = async () => {
+    try {
+        const res = await fetch(api('/api/Admin/orders/pending/total'), {
+            headers: { 
+                'accept': '*/*',
+                'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
+            }
+        })
+        if (res.ok) {
+            pendingTotalData.value = await res.json()
+        }
+    } catch (e) {
+        console.error('Error fetching pending total:', e)
+    }
+}
+
+onMounted(() => {
+    fetchStockRequirements()
+    fetchPendingTotal()
+})
 
 // Status change confirmation state
 const showStatusModal = ref(false)
