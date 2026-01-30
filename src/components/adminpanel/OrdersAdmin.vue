@@ -31,7 +31,7 @@
             <h2 class="text-2xl font-bold">Besoins de Stock (Temps Réel)</h2>
             <p class="text-indigo-200 text-sm mt-1">Estimations basées sur {{ stockData.totalPendingOrders }} commande(s) en attente</p>
           </div>
-          <button @click="fetchStockRequirements" class="self-start md:self-auto bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <button @click="refreshAllData" class="self-start md:self-auto bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Actualiser
           </button>
@@ -180,7 +180,7 @@
             </svg>
             <p class="text-base sm:text-lg font-medium">Aucune commande trouvée</p>
             <p class="text-xs sm:text-sm text-gray-500 mt-1">
-              {{ selectedStatus === 'all' ? 'Aucune commande dans le système' : `Aucune commande avec le statut "${getStatusLabel(selectedStatus)}"` }}
+              {{ selectedStatus === 'all' ? 'Aucune commande dans le système' : 'Aucune commande avec le statut "' + getStatusLabel(selectedStatus) + '"' }}
             </p>
           </div>
           
@@ -265,6 +265,20 @@
                   </select>
                 </div>
                 <div class="flex items-end gap-2">
+                  <button 
+                    @click="downloadInvoice(order)"
+                    :disabled="isGeneratingInvoice[order.orderId]"
+                    class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs sm:text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                  >
+                    <svg v-if="!isGeneratingInvoice[order.orderId]" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <svg v-else class="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ isGeneratingInvoice[order.orderId] ? 'Détails...' : 'Facture' }}
+                  </button>
                   <button 
                     @click="deleteOrder(order.orderId)"
                     :disabled="isDeletingOrder[order.orderId]"
@@ -515,6 +529,7 @@ const showNotification = ref(false)
 const notificationMessage = ref('')
 const isUpdatingStatus = ref({})
 const isDeletingOrder = ref({})
+const isGeneratingInvoice = ref({})
 
 // Delete modal state
 const showDeleteModal = ref(false)
@@ -525,11 +540,14 @@ const stockData = ref(null)
 const pendingTotalData = ref(null)
 
 const fetchStockRequirements = async () => {
+    const token = user.value?.token
+    if (!token) return
+
     try {
         const res = await fetch(api('/api/Admin/stock/requirements'), {
             headers: { 
                 'accept': '*/*',
-                'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
+                'Authorization': `Bearer ${token}`
             }
         })
         if (res.ok) {
@@ -541,11 +559,14 @@ const fetchStockRequirements = async () => {
 }
 
 const fetchPendingTotal = async () => {
+    const token = user.value?.token
+    if (!token) return
+
     try {
         const res = await fetch(api('/api/Admin/orders/pending/total'), {
             headers: { 
                 'accept': '*/*',
-                'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
+                'Authorization': `Bearer ${token}`
             }
         })
         if (res.ok) {
@@ -556,9 +577,16 @@ const fetchPendingTotal = async () => {
     }
 }
 
+const refreshAllData = async () => {
+    await Promise.all([
+        loadOrders(),
+        fetchStockRequirements(),
+        fetchPendingTotal()
+    ])
+}
+
 onMounted(() => {
-    fetchStockRequirements()
-    fetchPendingTotal()
+    refreshAllData()
 })
 
 // Status change confirmation state
@@ -714,6 +742,152 @@ function handleImageError(event) {
   // so we don't need to do anything special here
 }
 
+async function downloadInvoice(order) {
+  isGeneratingInvoice.value[order.orderId] = true;
+  
+  let customerDetails = {
+    email: 'Non spécifié',
+    address: 'Non spécifiée',
+    phone: 'Non spécifié'
+  };
+
+  try {
+    // Fetch detailed user info using the customerName
+    const response = await fetch(api(`/api/Users/info?name=${encodeURIComponent(order.customerName)}`), {
+      method: 'GET',
+      headers: {
+        'accept': '*/*'
+      }
+    });
+
+    if (response.ok) {
+      const users = await response.json();
+      if (Array.isArray(users) && users.length > 0) {
+        // Find the user that matches the customer name
+        const user = users[0];
+        customerDetails.email = user.email || customerDetails.email;
+        customerDetails.address = user.address || customerDetails.address;
+        customerDetails.phone = user.phone || customerDetails.phone;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching customer details for invoice:', error);
+  } finally {
+    isGeneratingInvoice.value[order.orderId] = false;
+  }
+
+  const invoiceHtml = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <title>Facture #${order.orderId.slice(-8)}</title>
+      <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; margin: 0; padding: 40px; line-height: 1.6; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #ef4444; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 28px; font-weight: bold; color: #ef4444; }
+        .invoice-title { font-size: 24px; color: #111; margin: 0; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+        .info-block h3 { font-size: 14px; text-transform: uppercase; color: #667; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f9fafb; text-align: left; padding: 12px; border-bottom: 2px solid #eee; font-size: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .text-right { text-align: right; }
+        .totals { margin-left: auto; width: 300px; }
+        .total-row { display: flex; justify-content: space-between; padding: 10px 0; }
+        .grand-total { font-size: 20px; font-weight: bold; color: #ef4444; border-top: 2px solid #ef4444; margin-top: 10px; padding-top: 10px; }
+        .footer { margin-top: 60px; text-align: center; color: #99a; font-size: 12px; }
+        @media print {
+          body { padding: 20px; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo">DSushi</div>
+        <div>
+          <h1 class="invoice-title">FACTURE</h1>
+          <p style="margin: 5px 0; color: #667;">Numéro: #${order.orderId.slice(-8)}</p>
+          <p style="margin: 5px 0; color: #667;">Date: ${formatDate(order.orderDate)}</p>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-block">
+          <h3>Emetteur</h3>
+          <p><strong>DSushi Restaurant</strong><br>Avenue de l'Indépendance<br>Tunis, Tunisie<br>Contact: +216 71 000 000</p>
+        </div>
+        <div class="info-block">
+          <h3>Client</h3>
+          <p>
+            <strong>${order.customerName}</strong><br>
+            Email: ${customerDetails.email}<br>
+            Adresse: ${customerDetails.address}<br>
+            Tél: ${customerDetails.phone}<br>
+            Mode de paiement: Espèce à la livraison
+          </p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produit</th>
+            <th class="text-right">Prix Unit.</th>
+            <th class="text-right">Quantité</th>
+            <th class="text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${order.items.map(item => `
+            <tr>
+              <td>${item.productName}</td>
+              <td class="text-right">${Number(item.price).toFixed(2)} DT</td>
+              <td class="text-right">${item.quantity}</td>
+              <td class="text-right">${(item.quantity * item.price).toFixed(2)} DT</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div class="total-row">
+          <span>Sous-total</span>
+          <span>${Number(order.totalAmount).toFixed(2)} DT</span>
+        </div>
+        <div class="total-row">
+          <span>Frais de livraison</span>
+          <span>0.00 DT</span>
+        </div>
+        <div class="total-row grand-total">
+          <span>TOTAL</span>
+          <span>${Number(order.totalAmount).toFixed(2)} DT</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>Merci pour votre confiance ! À bientôt chez DSushi.</p>
+        <p>DSushi - Cuisine Japonaise Artisanale</p>
+      </div>
+
+      <script>
+        window.onload = function() {
+          setTimeout(() => {
+            window.print();
+            // Optional: window.close();
+          }, 500);
+        };
+      <\/script>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(invoiceHtml);
+  printWindow.document.close();
+}
+
 // Show status change confirmation modal
 function updateOrderStatus(orderId, newStatus) {
   const order = orders.value.find(o => o.orderId === orderId)
@@ -769,6 +943,7 @@ async function confirmStatusChange() {
     
     showNotificationMessage(`Statut de la commande mis à jour vers "${getStatusLabel(newStatus)}"`)
     closeStatusModal()
+    refreshAllData() // Refresh dashboard after status change
   } catch (error) {
     console.error('Error updating order status:', error)
     showNotificationMessage('Erreur lors de la mise à jour du statut')
@@ -829,6 +1004,7 @@ async function confirmDelete() {
     
     showNotificationMessage('Commande supprimée avec succès')
     closeDeleteModal()
+    refreshAllData() // Refresh dashboard after deletion
   } catch (error) {
     console.error('Error deleting order:', error)
     showNotificationMessage('Erreur lors de la suppression de la commande')
@@ -974,9 +1150,7 @@ watch([selectedStatus, selectedDateFilter], () => {
   currentPage.value = 1
 })
 
-onMounted(() => {
-  loadOrders()
-})
+// Initial load is handled in the consolidated refreshAllData onMounted call
   </script>
   
   <style scoped>

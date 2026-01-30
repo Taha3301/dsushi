@@ -10,7 +10,7 @@ const route = useRoute()
 const { isAdmin } = useAuth()
 
 // Hide navbar and footer on login/signup. When admin is connected, hide navbar and show sidebar.
-const hideForAuthPages = computed(() => route.path === '/login' || route.path === '/signup')
+const hideForAuthPages = computed(() => route.path === '/login' || route.path === '/signup' || route.path === '/forgot-password' || route.path === '/reset-password')
 const showNavbar = computed(() => !hideForAuthPages.value && !isAdmin.value)
 const showSidebar = computed(() => !hideForAuthPages.value && isAdmin.value)
 const showFooter = computed(() => !hideForAuthPages.value && !isAdmin.value)

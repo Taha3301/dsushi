@@ -105,20 +105,19 @@ async function submit() {
     }
     
     // Email validation
+    const emailToValidate = form.email.trim()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(form.email)) {
+    if (!emailRegex.test(emailToValidate)) {
       throw new Error('Veuillez entrer une adresse email valide.')
     }
     
     // Prepare email data
     const emailData = {
-      to_email: 'd.sushiftw@gmail.com',
-      from_name: form.name.trim(),
-      from_email: form.email.trim(),
+      fromName: form.name.trim(),
+      fromEmail: form.email.trim(),
       phone: form.phone.trim() || 'Non renseigné',
       subject: form.subject.trim(),
-      message: form.message.trim(),
-      timestamp: new Date().toLocaleString('fr-FR')
+      message: form.message.trim()
     }
     
     // Send email using our backend service via centralized API utility
@@ -146,7 +145,7 @@ async function submit() {
 
 async function sendEmail(emailData) {
   // Use centralized API utility for the email endpoint
-  const url = api('/api/send-contact-email')
+  const url = api('/api/contact')
   
   try {
     const controller = new AbortController()

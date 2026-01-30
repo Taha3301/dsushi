@@ -4,7 +4,7 @@
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Ajouter un administrateur</h1>
 
       <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 sm:p-6">
-        <form @submit.prevent="registerAdmin" class="space-y-4">
+        <form @submit.prevent="showVerifyModal = true" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
             <input v-model="form.name" type="text" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="Nom complet" />
@@ -30,6 +30,49 @@
         <div v-if="feedback" :class="['mt-4 px-4 py-3 rounded-xl text-sm', feedback.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700']">{{ feedback.message }}</div>
       </div>
     </div>
+
+    <!-- Password Verification Modal -->
+    <div v-if="showVerifyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+        <div class="mb-5">
+          <h2 class="text-xl font-bold text-gray-900">Confirmation de sécurité</h2>
+          <p class="text-sm text-gray-500 mt-1">Veuillez saisir votre mot de passe pour confirmer la création de l'administrateur.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Votre mot de passe</label>
+            <input 
+              v-model="verifyPassword" 
+              type="password" 
+              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" 
+              placeholder="••••••••"
+              @keyup.enter="handleVerification"
+              autofocus
+            />
+          </div>
+
+          <div v-if="verifyError" class="text-xs text-red-600 font-medium">{{ verifyError }}</div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button 
+              @click="handleVerification" 
+              :disabled="isVerifying || !verifyPassword"
+              class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white px-5 h-11 text-sm font-semibold shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
+            >
+              <svg v-if="isVerifying" class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              <span>Confirmer</span>
+            </button>
+            <button 
+              @click="closeModal" 
+              class="flex-1 inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 h-11 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -44,6 +87,55 @@ const { user } = useAuth()
 const form = reactive({ name: '', email: '', password: '' })
 const isSubmitting = ref(false)
 const feedback = ref('')
+
+const showVerifyModal = ref(false)
+const verifyPassword = ref('')
+const isVerifying = ref(false)
+const verifyError = ref('')
+
+const closeModal = () => {
+  showVerifyModal.value = false
+  verifyPassword.value = ''
+  verifyError.value = ''
+}
+
+const handleVerification = async () => {
+  if (!verifyPassword.value) return
+  
+  isVerifying.value = true
+  verifyError.value = ''
+  
+  try {
+    const res = await fetch(api('/api/Auth/me/verify-password'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
+      },
+      body: JSON.stringify({ password: verifyPassword.value })
+    })
+    
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Password incorrect')
+      throw new Error('Verification failed')
+    }
+    
+    const data = await res.json()
+    if (!data.valid) {
+      verifyError.value = 'Mot de passe incorrect.'
+      return
+    }
+    
+    // If valid, proceed to register
+    await registerAdmin()
+    closeModal()
+  } catch (e) {
+    console.error(e)
+    verifyError.value = 'Erreur de vérification. Veuillez réessayer.'
+  } finally {
+    isVerifying.value = false
+  }
+}
 
 const resetForm = () => {
   form.name = ''

@@ -47,10 +47,7 @@ const navigateToOrders = () => {
   showUserMenu.value = false
 }
 
-const navigateToFactures = () => {
-  router.push('/factures')
-  showUserMenu.value = false
-}
+
 
 const handleLogout = () => {
   logout()
@@ -662,16 +659,7 @@ onUnmounted(() => {
                 Mes commandes
               </button>
 
-              <!-- Factures Option -->
-              <button 
-                @click="navigateToFactures"
-                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4z"></path>
-                </svg>
-                Mes factures
-              </button>
+
 
               <!-- Settings Option -->
               <button 
@@ -746,16 +734,7 @@ onUnmounted(() => {
                 Mes commandes
               </button>
 
-              <!-- Factures Option -->
-              <button 
-                @click="navigateToFactures"
-                class="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-5 h-10 text-sm font-semibold text-gray-900 shadow-sm hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 hover:scale-105"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4z"></path>
-                </svg>
-                Mes factures
-              </button>
+
 
               <!-- Settings Option -->
               <button 

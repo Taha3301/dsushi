@@ -9,12 +9,67 @@ const { login } = useAuth()
 const close = () => {} // Dummy function to match the navbar's close function
 const email = ref('')
 const password = ref('')
+const rememberMe = ref(false)
 const isLoading = ref(false)
 const showPassword = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
+// Login Security States
+const failedAttempts = ref(Number(localStorage.getItem('loginFailedAttempts') || 0))
+const lockoutUntil = ref(Number(localStorage.getItem('loginLockoutUntil') || 0))
+const remainingLockoutSecs = ref(0)
+let timerInterval = null
+
+import { onMounted, onUnmounted } from 'vue'
+
+const startLockoutTimer = () => {
+  if (timerInterval) clearInterval(timerInterval)
+  
+  const updateTimer = () => {
+    const now = Date.now()
+    if (now < lockoutUntil.value) {
+      remainingLockoutSecs.value = Math.ceil((lockoutUntil.value - now) / 1000)
+    } else {
+      remainingLockoutSecs.value = 0
+      clearInterval(timerInterval)
+      // We don't reset failedAttempts here automatically, 
+      // but we allow login again.
+    }
+  }
+  
+  updateTimer()
+  timerInterval = setInterval(updateTimer, 1000)
+}
+
+onMounted(() => {
+  const savedEmail = localStorage.getItem('savedEmail')
+  const savedPassword = localStorage.getItem('savedPassword')
+  if (savedEmail) {
+    email.value = savedEmail
+    rememberMe.value = true
+  }
+  if (savedPassword) {
+    password.value = savedPassword
+  }
+
+  // Check for existing lockout
+  if (lockoutUntil.value > Date.now()) {
+    startLockoutTimer()
+  }
+})
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
+
 const handleLogin = async () => {
+  // Check lockout
+  if (Date.now() < lockoutUntil.value) {
+    errorMessage.value = `Trop de tentatives. Veuillez réessayer dans ${remainingLockoutSecs.value}s.`
+    return
+  }
+
   errorMessage.value = ''
   successMessage.value = ''
   isLoading.value = true
@@ -33,6 +88,22 @@ const handleLogin = async () => {
 
     if (response.ok) {
       const userData = await response.json()
+      
+      // Reset security tracking on success
+      failedAttempts.value = 0
+      lockoutUntil.value = 0
+      localStorage.removeItem('loginFailedAttempts')
+      localStorage.removeItem('loginLockoutUntil')
+
+      // If remember me is checked, save credentials for next time
+      if (rememberMe.value) {
+        localStorage.setItem('savedEmail', email.value)
+        localStorage.setItem('savedPassword', password.value)
+      } else {
+        localStorage.removeItem('savedEmail')
+        localStorage.removeItem('savedPassword')
+      }
+
       // Store user data in auth store
       login({
         email: email.value,
@@ -41,7 +112,7 @@ const handleLogin = async () => {
         token: userData.token,
         expires: userData.expires,
         ...userData
-      })
+      }, rememberMe.value)
       
       successMessage.value = 'Connexion réussie !'
       
@@ -54,15 +125,26 @@ const handleLogin = async () => {
         }
       }, 1500)
     } else {
-      let errorText = 'Erreur lors de la connexion'
-      try {
-        const errorData = await response.json()
-        errorText = errorData.message || errorText
-      } catch (jsonError) {
-        // If response is not JSON, use status text
-        errorText = response.statusText || errorText
+      // Track failure
+      failedAttempts.value++
+      localStorage.setItem('loginFailedAttempts', failedAttempts.value)
+      
+      if (failedAttempts.value >= 5) {
+        const duration = 60 * 1000 // 60 seconds
+        lockoutUntil.value = Date.now() + duration
+        localStorage.setItem('loginLockoutUntil', lockoutUntil.value)
+        startLockoutTimer()
+        errorMessage.value = `Compte temporairement bloqué suite à 5 échecs. Veuillez patienter ${remainingLockoutSecs.value}s.`
+      } else {
+        let errorText = 'Erreur lors de la connexion'
+        try {
+          const errorData = await response.json()
+          errorText = errorData.message || errorText
+        } catch (jsonError) {
+          errorText = response.statusText || errorText
+        }
+        errorMessage.value = `${errorText} (${5 - failedAttempts.value} tentatives restantes)`
       }
-      errorMessage.value = errorText
     }
   } catch (error) {
     errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
@@ -130,6 +212,8 @@ const navigateToSignup = () => {
                 id="email"
                 v-model="email"
                 type="email"
+                name="email"
+                autocomplete="username"
                 required
                 class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
                 placeholder="votre@email.com"
@@ -152,6 +236,8 @@ const navigateToSignup = () => {
                 id="password"
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
+                name="password"
+                autocomplete="current-password"
                 required
                 class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
                 placeholder="••••••••"
@@ -177,6 +263,7 @@ const navigateToSignup = () => {
             <div class="flex items-center">
               <input
                 id="remember-me"
+                v-model="rememberMe"
                 name="remember-me"
                 type="checkbox"
                 class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
@@ -186,9 +273,9 @@ const navigateToSignup = () => {
               </label>
             </div>
             <div class="text-sm">
-              <a href="#" class="font-medium text-red-600 hover:text-red-500 transition-colors duration-200">
+              <router-link to="/forgot-password" class="font-medium text-red-600 hover:text-red-500 transition-colors duration-200">
                 Mot de passe oublié ?
-              </a>
+              </router-link>
             </div>
           </div>
 
@@ -196,14 +283,20 @@ const navigateToSignup = () => {
           <div>
             <button
               type="submit"
-              :disabled="isLoading"
+              :disabled="isLoading || remainingLockoutSecs > 0"
               class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
-              <span v-if="!isLoading" class="flex items-center">
+              <span v-if="!isLoading && remainingLockoutSecs <= 0" class="flex items-center">
                 Se connecter
                 <svg class="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
                 </svg>
+              </span>
+              <span v-else-if="remainingLockoutSecs > 0" class="flex items-center">
+                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Réessayer dans {{ remainingLockoutSecs }}s
               </span>
               <span v-else class="flex items-center">
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">

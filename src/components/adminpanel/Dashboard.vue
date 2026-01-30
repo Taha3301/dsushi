@@ -345,7 +345,8 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('fr-TN', { 
     style: 'currency', 
     currency: 'TND', 
-    minimumFractionDigits: 2 
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value)
 }
 
@@ -848,6 +849,7 @@ input:checked + .slider .slider-icon.off {
 
 .stat-content {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
@@ -862,6 +864,7 @@ input:checked + .slider .slider-icon.off {
   font-weight: 800;
   color: #1f2937;
   margin: 0;
+  white-space: nowrap;
 }
 
 .stat-sublabel {

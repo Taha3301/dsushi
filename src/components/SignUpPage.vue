@@ -11,10 +11,6 @@ const isLoading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// Email verification states
-const showVerificationModal = ref(false)
-const verificationCode = ref('')
-const isVerifying = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
@@ -53,8 +49,10 @@ const handleSignUp = async () => {
     })
 
     if (response.ok) {
-      showVerificationModal.value = true
-      successMessage.value = 'Un code de vérification a été envoyé à votre email'
+      successMessage.value = 'Compte créé avec succès ! Redirection vers la page de connexion...'
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
     } else {
       let errorText = 'Erreur lors de l\'inscription'
       try {
@@ -74,45 +72,6 @@ const handleSignUp = async () => {
   }
 }
 
-const handleEmailVerification = async () => {
-  isVerifying.value = true
-  errorMessage.value = ''
-  
-  try {
-    const response = await fetch(api('/api/Auth/verify-email'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.value,
-        code: verificationCode.value
-      })
-    })
-
-    if (response.ok) {
-      successMessage.value = 'Email vérifié avec succès !'
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
-    } else {
-      let errorText = 'Code de vérification invalide'
-      try {
-        const errorData = await response.json()
-        errorText = errorData.message || errorText
-      } catch (jsonError) {
-        // If response is not JSON, use status text
-        errorText = response.statusText || errorText
-      }
-      errorMessage.value = errorText
-    }
-  } catch (error) {
-    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
-    console.error('Verification error:', error)
-  } finally {
-    isVerifying.value = false
-  }
-}
 
 const togglePasswordVisibility = (field) => {
   if (field === 'password') showPassword.value = !showPassword.value
@@ -123,11 +82,6 @@ const navigateToLogin = () => {
   router.push('/login')
 }
 
-const closeVerificationModal = () => {
-  showVerificationModal.value = false
-  verificationCode.value = ''
-  errorMessage.value = ''
-}
 </script>
 
 <template>
@@ -415,68 +369,6 @@ const closeVerificationModal = () => {
       </div>
     </div>
 
-    <!-- Email Verification Modal -->
-    <div v-if="showVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-        <div class="text-center mb-6">
-          <h3 class="text-2xl font-bold text-gray-900 mb-2">
-            Vérification de l'email
-          </h3>
-          <p class="text-gray-600">
-            Entrez le code de vérification envoyé à<br>
-            <span class="font-medium text-red-600">{{ email }}</span>
-          </p>
-        </div>
-
-        <!-- Error Message in Modal -->
-        <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          {{ errorMessage }}
-        </div>
-
-        <form @submit.prevent="handleEmailVerification" class="space-y-6">
-          <!-- Verification Code Input -->
-          <div>
-            <label for="verificationCode" class="block text-sm font-medium text-gray-700 mb-2">
-              Code de vérification
-            </label>
-            <input
-              id="verificationCode"
-              v-model="verificationCode"
-              type="text"
-              required
-              maxlength="6"
-              class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 text-center text-lg tracking-widest"
-              placeholder="000000"
-            />
-          </div>
-
-          <!-- Submit Button -->
-          <button
-            type="submit"
-            :disabled="isVerifying || verificationCode.length !== 6"
-            class="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            <span v-if="!isVerifying">Vérifier</span>
-            <span v-else class="flex items-center">
-              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Vérification...
-            </span>
-          </button>
-
-          <!-- Close Button -->
-          <button
-            type="button"
-            @click="closeVerificationModal"
-            class="w-full py-2 px-4 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
-          >
-            Annuler
-          </button>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 
