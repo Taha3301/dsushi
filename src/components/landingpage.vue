@@ -88,23 +88,65 @@
           </span>
         </h1>
         
-        <!-- Subtitle -->
-        <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto animate-fade-in-up-delay">
-          Savourez des sushis préparés avec passion, des ingrédients frais et une expertise traditionnelle. 
-          Chaque bouchée est une expérience culinaire exceptionnelle.
-        </p>
-        
+
+        <!-- Product Search -->
+        <div class="hero-search-wrapper animate-fade-in-up-delay" ref="searchWrapperRef">
+          <div class="hero-search-box">
+            <svg class="hero-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>
+            </svg>
+            <input
+              v-model="heroSearch"
+              type="text"
+              placeholder="Rechercher un produit..."
+              class="hero-search-input"
+              @focus="showDropdown = true"
+              autocomplete="off"
+            />
+            <span v-if="heroSearch" class="hero-search-clear" @click="heroSearch = ''; showDropdown = false">✕</span>
+          </div>
+
+          <!-- Dropdown -->
+          <transition name="dropdown-fade">
+            <ul v-if="showDropdown && heroSearch.trim() && filteredProducts.length > 0" class="search-dropdown">
+              <li
+                v-for="p in filteredProducts"
+                :key="p.productId"
+                class="search-dropdown-item"
+                @mousedown.prevent="goToProduct(p)"
+              >
+                <img
+                  v-if="p.imageUrls?.[0]"
+                  :src="p.imageUrls[0]"
+                  class="search-dropdown-img"
+                  alt=""
+                />
+                <div v-else class="search-dropdown-img search-dropdown-img--placeholder">🍣</div>
+                <div class="search-dropdown-info">
+                  <span class="search-dropdown-name">{{ p.name }}</span>
+                  <span v-if="p.price" class="search-dropdown-price">{{ formatPrice(p.price) }}</span>
+                </div>
+                <svg class="search-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+              </li>
+            </ul>
+            <div v-else-if="showDropdown && heroSearch.trim() && filteredProducts.length === 0" class="search-dropdown search-dropdown--empty">
+              <span>Aucun produit trouvé</span>
+            </div>
+          </transition>
+        </div>
+
         <!-- CTA Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up-delay-2">
           <button @click="goToProduits" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
             Commander Maintenant
           </button>
-          <button  @click="openMenuPopup" class="border-2 border-gray-700 hover:border-red-600 text-gray-700 hover:text-red-600 font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105">
+          <button @click="openMenuPopup" class="border-2 border-gray-700 hover:border-red-600 text-gray-700 hover:text-red-600 font-semibold py-4 px-8 rounded-full text-lg transition-all duration-300 transform hover:scale-105">
             Voir le Menu
           </button>
-          
         </div>
-        
+
         <!-- Floating Elements for Visual Appeal -->
         <div class="absolute top-20 left-10 animate-float">
           <div class="w-16 h-16 bg-red-100 rounded-full opacity-60"></div>
@@ -474,12 +516,53 @@
 
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { api, resolveImage } from '../utils/api.js'
+
+const CURRENCY = (import.meta?.env?.VITE_CURRENCY || 'TND').toUpperCase()
+const LOCALE   = import.meta?.env?.VITE_LOCALE || 'fr-TN'
+const formatPrice = (num) => {
+  const v = Number(num)
+  if (Number.isNaN(v)) return ''
+  try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2 }).format(v) }
+  catch { return `${v.toFixed(2)} ${CURRENCY}` }
+}
 
 const isMenuModalOpen = ref(false)
 const currentSlideIndex = ref(0)
 const router = useRouter()
+const heroSearch = ref('')
+const showDropdown = ref(false)
+const allProducts = ref([])
+const searchWrapperRef = ref(null)
+
+const filteredProducts = computed(() => {
+  const q = heroSearch.value.trim().toLowerCase()
+  if (!q) return []
+  return allProducts.value
+    .filter(p => (p.name || '').toLowerCase().includes(q))
+    .slice(0, 6)
+})
+
+async function loadProducts() {
+  try {
+    const res = await fetch(api('/api/Product'), { headers: { accept: '*/*' } })
+    if (res.ok) allProducts.value = await res.json()
+  } catch { /* silent */ }
+}
+
+function goToProduct(p) {
+  heroSearch.value = ''
+  showDropdown.value = false
+  router.push({ path: '/produit-details', query: { id: p.productId } })
+}
+
+function handleClickOutside(e) {
+  if (searchWrapperRef.value && !searchWrapperRef.value.contains(e.target)) {
+    showDropdown.value = false
+  }
+}
 
 // Update these paths to where your 1.png and 2.png actually live
 // Example expected location: src/assets/images/1.png and src/assets/images/2.png
@@ -513,6 +596,11 @@ function goToProduits() {
   router.push('/produits')
 }
 
+function searchProducts() {
+  const q = heroSearch.value.trim()
+  router.push({ path: '/produits', query: q ? { q } : {} })
+}
+
 function handleKeydown(event) {
   if (!isMenuModalOpen.value) return
   if (event.key === 'Escape') closeMenuPopup()
@@ -521,11 +609,14 @@ function handleKeydown(event) {
 }
 
 onMounted(() => {
+  loadProducts()
   window.addEventListener('keydown', handleKeydown)
+  document.addEventListener('mousedown', handleClickOutside)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('mousedown', handleClickOutside)
 })
 </script>
 
@@ -693,6 +784,178 @@ onBeforeUnmount(() => {
 
 .animate-sushi-float-7 {
   animation: sushiFloat7 13s ease-in-out infinite;
+}
+
+/* ============================================
+   HERO SEARCH
+============================================ */
+.hero-search-wrapper {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 50;
+  width: 100%;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-search-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 6px 6px 6px 20px;
+  width: 100%;
+  max-width: 520px;
+  width: 100%;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+/* Dropdown */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.16);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.search-dropdown--empty {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.search-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.search-dropdown-item:hover {
+  background: #fef2f2;
+}
+
+.search-dropdown-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f3f4f6;
+}
+
+.search-dropdown-img--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: #fef2f2;
+}
+
+.search-dropdown-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.search-dropdown-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-dropdown-price {
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.search-dropdown-arrow {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* Dropdown transition */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.hero-search-box:focus-within {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12), 0 8px 32px rgba(0, 0, 0, 0.14);
+}
+
+.hero-search-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  pointer-events: none;
+  margin-right: 10px;
+}
+
+.hero-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #111;
+  outline: none;
+  min-width: 0;
+}
+
+.hero-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.hero-search-clear {
+  flex-shrink: 0;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+
+.hero-search-clear:hover {
+  color: #374151;
 }
 
 /* Hover effects for buttons */

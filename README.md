@@ -7,7 +7,7 @@ If you want to open the app on your phone (same Wi‑Fi):
 3. Optional: create `.env.development` with:
 
 ```
-VITE_API_BASE_URL=https://localhost:7175
+VITE_API_BASE_URL=https://dsushi-be.onrender.com
 ```
 
 The dev server is configured to proxy `/api` and `/images` to the backend and will work over LAN.

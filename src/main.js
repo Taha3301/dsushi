@@ -52,7 +52,7 @@ const routes = [
   { path: '/orders-admin', component: OrdersAdmin, meta: { requiresAdmin: true } },
   { path: '/who-we-are', component: WhoWeAre },
   { path: '/forgot-password', component: ForgotPassword },
-  { path: '/reset-password', component: ResetPassword, meta: { requiresAuth: true } }
+  { path: '/reset-password', component: ResetPassword }
 ]
 
 // Create router instance
