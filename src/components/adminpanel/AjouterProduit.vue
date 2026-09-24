@@ -349,7 +349,7 @@ const handleSubmit = async () => {
       
       // Append all image files
       for (const f of files.value) {
-        fd.append('images', f)
+        fd.append('Images', f, f.name)
       }
 
       const res = await fetch(api('/api/Product'), {
