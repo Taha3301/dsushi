@@ -80,9 +80,10 @@
       <div class="space-y-4 md:space-y-6">
         <!-- Animated Title -->
         <h1 class="text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900 animate-fade-in-up px-4 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 leading-tight">
-          <span>Découvrez</span>
-          <span class="text-red-600 animate-pulse">D.Sushi</span>
+          <span>Sushis maison à</span>
+          <span class="text-red-600 animate-pulse">Djerba</span>
         </h1>
+        <p class="mobile-hero-tagline">Le goût du fait maison</p>
 
         <!-- High-Impact CTA Buttons (Now higher up) -->
         <div class="flex flex-row gap-4 justify-center items-center animate-fade-in-up-delay mt-2">
@@ -94,10 +95,6 @@
           </button>
         </div>
         
-        <div class="showcase-heading">
-          <h2>Nos incontournables</h2>
-        </div>
-
         <!-- Category Filter -->
         <div class="flex items-center md:justify-center gap-3 overflow-x-auto pb-4 no-scrollbar px-4 animate-fade-in-up-delay">
           <button 
@@ -105,7 +102,7 @@
             :class="{ active: !selectedCategory }"
             @click="selectedCategory = ''"
           >
-            Tous les Produits
+            Tous
           </button>
           <button 
             v-for="cat in categories" 
@@ -114,7 +111,7 @@
             :class="{ active: selectedCategory === cat.categoryId }"
             @click="selectedCategory = cat.categoryId"
           >
-            {{ cat.name }}
+            {{ categoryLabel(cat.name) }}
           </button>
         </div>
 
@@ -200,10 +197,10 @@
   </section>
 
 
-  <!-- Section 1: Innovation Culinaire -->
+  <!-- Section 1: La cuisine D.Sushi -->
   <section class="py-12 md:py-24 relative overflow-hidden">
     <!-- Background Elements -->
-    <div class="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-100"></div>
+    <div class="absolute inset-0 bg-[#E3E3E3]"></div>
     <div class="absolute top-0 left-0 w-full h-full">
       <div class="absolute top-20 right-20 w-32 h-32 bg-red-100 rounded-full opacity-20 animate-pulse"></div>
       <div class="absolute bottom-20 left-20 w-24 h-24 bg-gray-200 rounded-full opacity-30 animate-bounce"></div>
@@ -214,17 +211,17 @@
         <div class="space-y-6 text-center lg:text-left">
           <div class="inline-flex items-center px-4 py-2 rounded-full bg-red-100 text-red-700 text-sm font-medium">
             <span class="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
-            Innovation Culinaire
+            Sushis maison à Djerba
           </div>
           <h2 class="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
-            Optimiser les 
+            Le goût du 
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800">
-              Opérations
+              fait maison
             </span>
           </h2>
           <p class="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Optimisez le flux de votre cuisine, gérez les stocks et suivez chaque commande avec des tableaux de bord en temps réel. 
-            <span class="text-red-600 font-semibold">Une efficacité maximale pour une qualité exceptionnelle.</span>
+            Des sushis maison faits avec amour, préparés pour vous à Djerba. 
+            <span class="text-red-600 font-semibold">Rendez-vous chaque samedi de 18h à 21h.</span>
         </p>
       </div>
         
@@ -235,8 +232,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
-            <h3 class="font-semibold text-gray-900 mb-2">Rapidité</h3>
-            <p class="text-sm text-gray-600">Commandes traitées en temps réel</p>
+              <h3 class="font-semibold text-gray-900 mb-2">Commande en ligne</h3>
+            <p class="text-sm text-gray-600">Découvrez le menu du samedi</p>
           </div>
           
           <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
@@ -245,8 +242,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
               </svg>
             </div>
-            <h3 class="font-semibold text-gray-900 mb-2">Analytics</h3>
-            <p class="text-sm text-gray-600">Données en temps réel</p>
+            <h3 class="font-semibold text-gray-900 mb-2">Menu varié</h3>
+            <p class="text-sm text-gray-600">Des sushis maison faits avec amour</p>
           </div>
           
           <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
@@ -255,8 +252,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
               </svg>
             </div>
-            <h3 class="font-semibold text-gray-900 mb-2">Gestion</h3>
-            <p class="text-sm text-gray-600">Stocks optimisés</p>
+            <h3 class="font-semibold text-gray-900 mb-2">Chaque samedi</h3>
+            <p class="text-sm text-gray-600">Service de 18h à 21h à Houmt Souk</p>
           </div>
         </div>
       </div>
@@ -279,10 +276,10 @@
     </div>
   </section>
 
-  <!-- Section 2: Expérience Premium -->
+  <!-- Section 2: Commander chez D.Sushi -->
   <section class="py-12 md:py-24 relative overflow-hidden">
     <!-- Background Pattern -->
-    <div class="absolute inset-0 bg-gradient-to-br from-red-50 via-white to-gray-50"></div>
+    <div class="absolute inset-0 bg-[#E3E3E3]"></div>
     <div class="absolute inset-0 opacity-5">
       <div class="absolute top-10 left-10 w-20 h-20 border border-red-200 rounded-full"></div>
       <div class="absolute top-32 right-16 w-16 h-16 border border-red-200 rounded-full"></div>
@@ -312,17 +309,17 @@
             <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
-            Expérience Premium
+            D.Sushi
           </div>
           <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
-            Ravir les 
+            Savourer le 
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800">
-              Clients
+              goût maison
             </span>
           </h2>
           <p class="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Des menus magnifiques, des commandes rapides et des mises à jour en temps réel font revenir vos invités. 
-            <span class="text-red-600 font-semibold">Chaque interaction est une expérience mémorable.</span>
+            Pas de restaurant, mais des sushis maison qui ont encore plus de goût. Découvrez notre sélection et préparez votre commande. 
+            <span class="text-red-600 font-semibold">Nous vous retrouvons chaque samedi à Houmt Souk, Djerba.</span>
           </p>
         </div>
         
@@ -334,8 +331,8 @@
               </svg>
             </div>
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Satisfaction Client</h3>
-              <p class="text-gray-600">Interface intuitive et expérience utilisateur exceptionnelle</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Sushis maison</h3>
+              <p class="text-gray-600">Faits avec amour pour chaque commande</p>
             </div>
           </div>
           
@@ -346,8 +343,8 @@
               </svg>
             </div>
       <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Performance</h3>
-              <p class="text-gray-600">Temps de réponse optimisés pour une fluidité parfaite</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Le samedi</h3>
+              <p class="text-gray-600">Commandes et service de 18h à 21h</p>
             </div>
           </div>
           
@@ -358,15 +355,15 @@
               </svg>
       </div>
       <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Qualité</h3>
-              <p class="text-gray-600">Standards élevés pour chaque commande et interaction</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Houmt Souk</h3>
+              <p class="text-gray-600">D.Sushi vous retrouve à Djerba</p>
             </div>
           </div>
         </div>
         
         <div class="pt-4">
-          <button class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-full hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-            Découvrir l'expérience
+          <button @click="goToProduits" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-full hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+            Voir le menu du samedi
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
             </svg>
@@ -376,10 +373,10 @@
     </div>
   </section>
 
-  <!-- Section 3: Analyses & Croissance -->
+  <!-- Section 3: L'expérience D.Sushi -->
   <section class="py-12 md:py-24 relative overflow-hidden">
     <!-- Background Elements -->
-    <div class="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black"></div>
+    <div class="absolute inset-0 bg-[#E3E3E3]"></div>
     <div class="absolute inset-0 opacity-10">
       <div class="absolute top-20 left-20 w-32 h-32 bg-red-500 rounded-full blur-3xl"></div>
       <div class="absolute bottom-20 right-20 w-40 h-40 bg-red-600 rounded-full blur-3xl"></div>
@@ -393,17 +390,17 @@
             <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
               <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>
-            Intelligence Data
+            L'expérience D.Sushi
           </div>
           <h2 class="text-4xl md:text-5xl font-bold tracking-tight text-white leading-tight">
-            Analyses & 
+            Préparez votre 
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-600">
-              Croissance
+              commande
             </span>
           </h2>
           <p class="text-base md:text-lg text-gray-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Prenez des décisions plus intelligentes avec les analyses de ventes, les performances du menu et les insights clients en un seul endroit. 
-            <span class="text-red-400 font-semibold">L'avenir de votre restaurant commence ici.</span>
+            Découvrez le menu, choisissez vos préférés et préparez votre commande pour le prochain service. 
+            <span class="text-red-400 font-semibold">Samedi, de 18h à 21h à Houmt Souk.</span>
           </p>
         </div>
         
@@ -415,10 +412,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">+127%</span>
+              <span class="text-2xl font-bold text-white">18h</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Ventes</h3>
-            <p class="text-gray-300 text-sm">Croissance mensuelle</p>
+            <h3 class="text-white font-semibold mb-2">Samedi</h3>
+            <p class="text-gray-300 text-sm">Le rendez-vous D.Sushi</p>
           </div>
           
           <div class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
@@ -428,10 +425,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">4.9★</span>
+              <span class="text-2xl font-bold text-white">Maison</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Satisfaction</h3>
-            <p class="text-gray-300 text-sm">Note moyenne clients</p>
+            <h3 class="text-white font-semibold mb-2">Fait avec amour</h3>
+            <p class="text-gray-300 text-sm">Des sushis maison</p>
           </div>
           
           <div class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
@@ -441,10 +438,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">+89%</span>
+              <span class="text-2xl font-bold text-white">21h</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Efficacité</h3>
-            <p class="text-gray-300 text-sm">Amélioration opérationnelle</p>
+            <h3 class="text-white font-semibold mb-2">Fin du service</h3>
+            <p class="text-gray-300 text-sm">Jusqu'à 21h le samedi</p>
           </div>
           
           <div class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
@@ -454,16 +451,16 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">+156%</span>
+              <span class="text-2xl font-bold text-white">4180</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Clients</h3>
-            <p class="text-gray-300 text-sm">Fidélisation</p>
+            <h3 class="text-white font-semibold mb-2">Houmt Souk</h3>
+            <p class="text-gray-300 text-sm">Djerba, Tunisie</p>
           </div>
         </div>
         
         <div class="pt-4">
-          <button class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-full hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/25">
-            Voir les analyses
+          <button @click="goToProduits" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-full hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/25">
+            Découvrir le menu
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>
@@ -487,7 +484,7 @@
           <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 shadow-lg">
             <div class="flex items-center space-x-2">
               <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span class="text-xs font-medium text-gray-700">Analytics Live</span>
+              <span class="text-xs font-medium text-gray-700">Samedi 18h–21h</span>
             </div>
           </div>
         </div>
@@ -638,6 +635,16 @@ const filteredProducts = computed(() => {
   ).slice(0, 20)
 })
 
+function categoryLabel(name) {
+  const value = String(name || '').toLowerCase()
+  if (value.includes('crunchy')) return 'Crunchy'
+  if (value.includes('california')) return 'California'
+  if (value.includes('maki')) return 'Makis'
+  if (value.includes('cru')) return 'Sushi Crus'
+  if (value.includes('box')) return 'Boxs'
+  return name
+}
+
 async function loadProducts() {
   try {
     const res = await fetch(api('/api/Product'), { headers: { accept: '*/*' } })
@@ -663,16 +670,12 @@ function goToProduct(p) {
 }
 
 
-// Update these paths to where your 1.png and 2.png actually live
-// Example expected location: src/assets/images/1.png and src/assets/images/2.png
-const slides = [
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde.jpg', import.meta.url).href,
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde (1).jpg', import.meta.url).href,
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde (2).jpg', import.meta.url).href,
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde (3).jpg', import.meta.url).href,
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde (4).jpg', import.meta.url).href,
-  new URL('../assets/images/menu/Sushi cravings 🍣We take orders all week, but spots are limited – first come, first served! Orde (5).jpg', import.meta.url).href,
-]
+const menuImages = import.meta.glob('../assets/images/menu/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  query: '?url',
+  import: 'default'
+})
+const slides = Object.values(menuImages)
 
 function openMenuPopup() {
   isMenuModalOpen.value = true
@@ -1354,7 +1357,7 @@ button:hover {
 @media (max-width: 640px) {
   .hero-section {
     padding: 18px 0 104px !important;
-    background: linear-gradient(180deg, #f1f2f3 0%, #f8f8f7 58%, #ffffff 100%) !important;
+    background: #E3E3E3 !important;
   }
 
   .hero-decorations {
@@ -1460,7 +1463,7 @@ button:hover {
 
 /* Editorial home refresh */
 .hero-section {
-  background: #f6f4f0 !important;
+  background: #E3E3E3 !important;
 }
 
 .hero-kicker {
@@ -1509,7 +1512,9 @@ button:hover {
 }
 
 .hero-decorations {
-  opacity: 0.11;
+  opacity: 0.3;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .showcase-card {
@@ -1632,6 +1637,175 @@ button:hover {
   .showcase-card .absolute.bottom-3 svg {
     width: 18px;
     height: 18px;
+  }
+}
+
+/* Mobile reference layout: image-led hero with compact menu browsing. */
+.mobile-hero-tagline {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    min-height: 0 !important;
+    padding: 18px 0 34px !important;
+    color: #172033;
+    background-color: #E3E3E3 !important;
+    background-image: none;
+  }
+
+  .hero-section::before {
+    position: absolute;
+    top: 92px;
+    right: -42px;
+    z-index: 0;
+    width: 62%;
+    height: 245px;
+    content: '';
+    background: url('../assets/images/sushi1.jpg') center / cover no-repeat;
+    border-radius: 42% 0 0 42%;
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  .hero-decorations {
+    display: none !important;
+  }
+
+  .hero-section > .w-full {
+    padding: 0 18px;
+  }
+
+  .hero-section h1 {
+    display: block !important;
+    margin: 30px 0 0;
+    color: #172033 !important;
+    font-size: 2.05rem !important;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    text-align: left;
+  }
+
+  .hero-section h1 span {
+    display: block;
+  }
+
+  .hero-section h1 span:last-child {
+    margin-top: 4px;
+    color: #dc2626 !important;
+    font-size: 2.05rem !important;
+  }
+
+  .mobile-hero-tagline {
+    display: block;
+    margin: 7px 0 0;
+    color: #374151;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .hero-section .flex.flex-row {
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .hero-section .flex.flex-row button {
+    min-height: 40px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+  }
+
+  .hero-section .flex.flex-row button:first-child {
+    display: inline-flex !important;
+    background: #dc2626;
+    color: #fff;
+    border: 1px solid #dc2626;
+  }
+
+  .hero-section .flex.flex-row button:last-child {
+    border-color: rgba(23, 32, 51, 0.72);
+    color: #172033;
+    background: rgba(255, 255, 255, 0.42);
+  }
+
+  .hero-section .flex.items-center.md\:justify-center {
+    justify-content: flex-start;
+    gap: 8px;
+    margin: 26px -18px 0;
+    padding: 0 18px 4px;
+  }
+
+  .showcase-cat-pill {
+    padding: 7px 13px;
+    border: 1px solid rgba(23, 32, 51, 0.28);
+    background: rgba(255, 255, 255, 0.42);
+    color: #172033;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .showcase-cat-pill:hover {
+    background: rgba(255, 255, 255, 0.72);
+    color: #172033;
+  }
+
+  .showcase-cat-pill.active {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .showcase-slider-wrapper {
+    margin: 8px -18px 0 !important;
+    padding: 0 18px;
+  }
+
+  .showcase-nav-btn {
+    display: none;
+  }
+
+  .showcase-track {
+    gap: 12px;
+    padding: 10px 0 18px;
+  }
+
+  .showcase-card {
+    flex: 0 0 84%;
+    max-width: 84%;
+    border: 1px solid rgba(23, 32, 51, 0.12);
+    border-radius: 14px;
+    background: #e5e5e5;
+    box-shadow: 0 12px 28px rgba(23, 32, 51, 0.16);
+  }
+
+  .showcase-card-img-wrap {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  .showcase-card-info {
+    min-height: 76px;
+    padding: 11px 14px 13px;
+    background: transparent;
+    text-align: left;
+  }
+
+  .showcase-card-name {
+    color: #172033;
+    font-size: 0.9rem;
+  }
+
+  .showcase-card-price {
+    color: #dc2626;
+    font-size: 0.95rem;
+  }
+
+  .showcase-card .absolute.bottom-3 {
+    background: #dc2626;
+    color: #fff;
   }
 }
 </style>

@@ -360,11 +360,11 @@ onUnmounted(() => {
 
 <template>
   <header :class="[
-    'sticky top-0 z-50 w-full backdrop-blur border-b border-gray-200 transition-all duration-300',
-    isScrolled ? 'bg-[#E3E3E3]/70' : 'bg-[#E3E3E3]/95'
+    'sticky top-0 z-50 w-full backdrop-blur border-b transition-all duration-300',
+    isScrolled ? 'border-gray-200 bg-[#E3E3E3]/90 md:border-gray-200 md:bg-[#E3E3E3]/70' : 'border-gray-200 bg-[#E3E3E3]/95 md:border-gray-200 md:bg-[#E3E3E3]/95'
   ]">
     <div class="mx-auto max-w-7xl px-6">
-      <!-- Mobile top bar: logo | search -->
+      <!-- Mobile top bar: unchanged logo with reference actions -->
       <div class="flex h-16 items-center gap-3 md:hidden">
         <!-- Logo (no text) -->
         <router-link to="/" class="flex items-center" @click="close()">
@@ -409,6 +409,11 @@ onUnmounted(() => {
             </div>
           </div>
         </label>
+        <button type="button" aria-label="Menu" class="inline-flex h-10 w-10 items-center justify-center text-[#172033]">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6">
+            <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
       </div>
 
       <!-- Desktop row -->
