@@ -267,6 +267,12 @@ const loadProductImages = async () => {
   
   const imagePromises = products.value.map(async (product) => {
     if (!product.productId) return
+
+    // Keep the URL returned by the product API (Cloudinary). The images
+    // endpoint may still return legacy local `/Images/...` paths.
+    const hasRemoteImage = Array.isArray(product.imageUrls)
+      && product.imageUrls.some(image => typeof image === 'string' && /^https?:\/\//i.test(image.trim()))
+    if (hasRemoteImage) return
     
     try {
       const response = await fetch(api(`/api/Product/${product.productId}/images`), {
@@ -280,15 +286,7 @@ const loadProductImages = async () => {
       if (response.ok) {
         const images = await response.json()
         if (Array.isArray(images) && images.length > 0) {
-          product.imageUrls = images.map(imgPath => {
-            if (typeof imgPath === 'string') {
-              let path = imgPath.trim()
-              if (!path.startsWith('/')) path = `/${path}`
-              path = path.replace(/\/+/g, '/')
-              return path
-            }
-            return imgPath
-          })
+          product.imageUrls = images.map(imgPath => (typeof imgPath === 'string' ? imgPath.trim() : imgPath))
         } else if (!product.imageUrls || product.imageUrls.length === 0) {
           product.imageUrls = []
         }
@@ -341,11 +339,11 @@ const handleSubmit = async () => {
       }
 
       const fd = new FormData()
-      fd.append('name', form.name.trim())
-      fd.append('description', form.description?.trim() || '')
-      fd.append('price', String(form.price))
-      fd.append('stock', String(form.stock))
-      fd.append('categoryId', form.categoryId)
+      fd.append('Name', form.name.trim())
+      fd.append('Description', form.description?.trim() || '')
+      fd.append('Price', String(form.price))
+      fd.append('Stock', String(form.stock))
+      fd.append('CategoryId', form.categoryId)
       
       // Append all image files
       for (const f of files.value) {
@@ -373,6 +371,10 @@ const handleSubmit = async () => {
       
       // Reload products to show the new one
       await loadProducts()
+      const created = products.value.find(product => product.productId === createdProduct.productId)
+      if (created && Array.isArray(createdProduct.imageUrls)) {
+        created.imageUrls = createdProduct.imageUrls
+      }
       resetForm()
     } else {
       // Update existing product

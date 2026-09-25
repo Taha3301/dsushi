@@ -12,11 +12,11 @@
         <!-- Images -->
         <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div class="aspect-square bg-gray-50">
-            <img :src="resolveImage(activeImage)" :alt="product.name" class="w-full h-full object-cover" @error="onImgError" />
+            <img :src="resolveImage(activeImage, 1200)" :alt="product.name" class="w-full h-full object-cover" @error="onImgError" />
           </div>
           <div class="p-3 grid grid-cols-4 sm:grid-cols-6 gap-3">
             <button v-for="(img, i) in product.imageUrls" :key="i" @click="activeImage = img" class="relative aspect-square rounded-lg overflow-hidden border" :class="activeImage === img ? 'border-red-500' : 'border-gray-200'">
-              <img :src="resolveImage(img)" class="w-full h-full object-cover" @error="onImgError" />
+              <img :src="resolveImage(img, 200)" class="w-full h-full object-cover" @error="onImgError" />
             </button>
           </div>
         </div>
@@ -182,6 +182,13 @@ async function loadProduct() {
 
 async function loadProductImages(prod) {
   if (!prod?.productId) return
+
+  // Keep the Cloudinary URL returned by GET /api/Product. The images endpoint
+  // may return a legacy local `/Images/...` path for older records.
+  const hasRemoteImage = Array.isArray(prod.imageUrls)
+    && prod.imageUrls.some(image => typeof image === 'string' && /^https?:\/\//i.test(image.trim()))
+  if (hasRemoteImage) return
+
   try {
     const res = await fetch(api(`/api/Product/${prod.productId}/images`), {
       method: 'GET',
@@ -194,14 +201,7 @@ async function loadProductImages(prod) {
     }
     const images = await res.json()
     if (Array.isArray(images) && images.length > 0) {
-      prod.imageUrls = images.map(imgPath => {
-        if (typeof imgPath === 'string') {
-          let path = imgPath.trim()
-          if (!path.startsWith('/')) path = `/${path}`
-          return path.replace(/\/+/g, '/')
-        }
-        return imgPath
-      })
+      prod.imageUrls = images.map(imgPath => (typeof imgPath === 'string' ? imgPath.trim() : imgPath))
     } else if (!prod.imageUrls) {
       prod.imageUrls = []
     }

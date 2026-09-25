@@ -29,7 +29,16 @@ const showFooter = computed(() => !hideForAuthPages.value && !isAdmin.value)
   </div>
 
   <!-- Default layout without sidebar -->
-  <router-view v-else />
+  <div v-else :class="showNavbar ? 'pb-24 md:pb-0' : ''">
+    <router-view />
+  </div>
   <Footer v-if="showFooter" />
 </template>
 
+<style>
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+</style>

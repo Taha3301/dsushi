@@ -243,6 +243,12 @@ const loadProductImages = async () => {
   // Load images for all products in parallel
   const imagePromises = products.value.map(async (product) => {
     if (!product.productId) return
+
+    // Keep Cloudinary URLs returned by the product API. The images endpoint
+    // can still expose legacy `/Images/...` paths.
+    const hasRemoteImage = Array.isArray(product.imageUrls)
+      && product.imageUrls.some(image => typeof image === 'string' && /^https?:\/\//i.test(image.trim()))
+    if (hasRemoteImage) return
     
     try {
       const response = await fetch(api(`/api/Product/${product.productId}/images`), {
@@ -260,20 +266,7 @@ const loadProductImages = async () => {
         // API returns an array like ["/images/filename.png"] from your backend
         if (Array.isArray(images) && images.length > 0) {
           // Normalize all image paths to ensure they start with /
-          product.imageUrls = images.map(imgPath => {
-            if (typeof imgPath === 'string') {
-              // Ensure path starts with / and normalize
-              let path = imgPath.trim()
-              if (!path.startsWith('/')) {
-                path = `/${path}`
-              }
-              // Remove double slashes
-              path = path.replace(/\/+/g, '/')
-              console.log(`[CrudProduct] Normalized image path for product ${product.productId}:`, path)
-              return path
-            }
-            return imgPath
-          })
+          product.imageUrls = images.map(imgPath => (typeof imgPath === 'string' ? imgPath.trim() : imgPath))
           console.log(`[CrudProduct] ✅ Successfully loaded ${product.imageUrls.length} image(s) for product ${product.productId}`)
         } else if (!product.imageUrls || product.imageUrls.length === 0) {
           // Keep existing imageUrls if API returns empty, otherwise set to empty array

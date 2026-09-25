@@ -81,7 +81,7 @@
                   >
                     <!-- Image -->
                     <div class="card-image-wrap">
-                      <img :src="resolveImage(p.imageUrls?.[0])" :alt="p.name" class="card-image" />
+                      <img :src="resolveImage(p.imageUrls?.[0], 400)" :alt="p.name" class="card-image" />
                       <div class="card-image-overlay"></div>
                       <div v-if="!p.disponible" class="badge badge--unavailable">Épuisé</div>
                       <button v-if="p.disponible" class="quick-add" @click.stop="addToCart(p)" aria-label="Ajouter au panier">
@@ -127,7 +127,7 @@
                 >
                   <!-- Image -->
                   <div class="card-image-wrap">
-                    <img :src="resolveImage(p.imageUrls?.[0])" :alt="p.name" class="card-image" />
+                    <img :src="resolveImage(p.imageUrls?.[0], 400)" :alt="p.name" class="card-image" />
                     <div class="card-image-overlay"></div>
                     <div v-if="!p.disponible" class="badge badge--unavailable">Épuisé</div>
                     <button v-if="p.disponible" class="quick-add" @click.stop="addToCart(p)" aria-label="Ajouter au panier">
@@ -158,9 +158,10 @@
 
           <!-- Empty state -->
           <div v-if="categoriesWithProducts.length === 0" class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <p class="empty-title">Aucun produit trouvé</p>
-            <p class="empty-sub">Essayez d'autres mots-clés</p>
+            <div class="empty-icon">{{ loadError ? '⚠️' : '🔍' }}</div>
+            <p class="empty-title">{{ loadError ? 'Impossible de charger les produits' : 'Aucun produit trouvé' }}</p>
+            <p class="empty-sub">{{ loadError ? 'Vérifiez votre connexion et réessayez' : "Essayez d'autres mots-clés" }}</p>
+            <button v-if="loadError" class="details-btn" style="margin-top: 12px" @click="loadProducts">Réessayer</button>
           </div>
         </div>
 
@@ -171,7 +172,7 @@
     <div v-if="detailsProduct" class="modal-backdrop" @click.self="closeDetails">
       <div class="modal-card animate-modal">
         <div class="modal-image-col">
-          <img :src="resolveImage(detailsProduct.imageUrls?.[0])" :alt="detailsProduct.name" class="modal-image" />
+          <img :src="resolveImage(detailsProduct.imageUrls?.[0], 600)" :alt="detailsProduct.name" class="modal-image" />
           <div class="modal-cat-badge">
             {{ detailsProduct.category?.name || categoryNameById(detailsProduct.categoryId) || '—' }}
           </div>
@@ -241,6 +242,7 @@ const formatPrice = (num) => {
 const products = ref([])
 const categories = ref([])
 const isLoading = ref(true)
+const loadError = ref(false)
 const toastMessage = ref('')
 const detailsProduct = ref(null)
 const showHeaderTitle = ref(true)
@@ -256,15 +258,19 @@ const selectedCategory = ref('')
 const categoryNameById = (id) => categories.value.find(c => c.categoryId === id)?.name
 
 const loadProducts = async () => {
+    isLoading.value = true
+    loadError.value = false
   try {
     const res = await fetch(api('/api/Product'), {
       headers: { 'accept': '*/*', 'Authorization': user.value?.token ? `Bearer ${user.value.token}` : '' }
     })
     if (!res.ok) throw new Error('fetch products failed')
-    products.value = await res.json()
+    const data = await res.json()
+    products.value = Array.isArray(data) ? data : []
   } catch (e) {
     console.error(e)
     products.value = []
+    loadError.value = true
   } finally {
     isLoading.value = false
   }
@@ -621,6 +627,8 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 ============================================ */
 .product-card {
   background: #fff;
+  display: flex;
+  flex-direction: column;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid #f0f0f0;
@@ -728,6 +736,12 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 /* Card body */
 .card-body {
   padding: 16px;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 174px;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .card-name {
@@ -759,8 +773,9 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 .card-footer {
   display: flex;
   align-items: center;
+  gap: 8px;
   justify-content: space-between;
-  margin-top: 12px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid #f3f4f6;
 }
@@ -783,6 +798,8 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 6px 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1119,9 +1136,12 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
     border-radius: 999px;
   }
 
-  .card-body { padding: 10px; }
+  .card-body { padding: 12px; min-height: 154px; }
   .card-name { font-size: 0.82rem; }
-  .card-price { font-size: 0.95rem; }
+  .card-price { font-size: 0.9rem; white-space: nowrap; }
+  .card-footer { gap: 6px; padding-top: 10px; }
+  .details-btn { font-size: 0.72rem; padding: 6px 9px; }
+  .details-arrow { width: 12px; height: 12px; }
   .cat-pill { padding: 8px 14px; font-size: 0.8rem; }
   .cat-name { font-size: 1.2rem; }
   .cat-count { font-size: 0.72rem; }

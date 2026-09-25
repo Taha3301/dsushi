@@ -25,36 +25,46 @@ const handleSendCode = async () => {
   successMessage.value = ''
   isLoading.value = true
 
-  try {
-    const response = await fetch(api('/api/Auth/send-code'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ email: email.value })
-    })
+  const maxRetries = 2
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(api('/api/Auth/send-code'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email: email.value })
+      })
 
-    if (response.ok) {
-      step.value = 2
-      successMessage.value = 'Un code de vérification a été envoyé à votre adresse email.'
-    } else {
-      let errorText = 'Erreur lors de la demande'
-      try {
-        const errorData = await response.json()
-        errorText = errorData.message || errorText
-      } catch (jsonError) {
-        errorText = response.statusText || errorText
+      if (response.ok) {
+        step.value = 2
+        successMessage.value = 'Un code de vérification a été envoyé à votre adresse email.'
+      } else {
+        let errorText = 'Erreur lors de la demande'
+        try {
+          const errorData = await response.json()
+          errorText = errorData.message || errorText
+        } catch (jsonError) {
+          errorText = response.statusText || errorText
+        }
+        errorMessage.value = errorText
       }
-      errorMessage.value = errorText
+      break
+
+    } catch (error) {
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 3000))
+        continue
+      }
+      errorMessage.value = 'Le serveur met du temps à répondre. Veuillez réessayer dans quelques secondes.'
+      console.error('Send code error:', error)
     }
-  } catch (error) {
-    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
-    console.error('Send code error:', error)
-  } finally {
-    isLoading.value = false
   }
+
+  isLoading.value = false
 }
+
 
 // Step 2: Reset password
 const handleResetPassword = async () => {
