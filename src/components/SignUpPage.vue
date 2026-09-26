@@ -37,16 +37,25 @@ const handleSignUp = async () => {
   isLoading.value = true
   
   try {
-    const response = await fetch(api('/api/Auth/register/customer'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+    let response
+    try {
+      response = await fetch(api('/api/Auth/register/customer'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.value,
+          password: password.value
+        }),
+        signal: controller.signal
       })
-    })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (response.ok) {
       successMessage.value = 'Compte créé avec succès ! Redirection vers la page de connexion...'
@@ -55,17 +64,22 @@ const handleSignUp = async () => {
       }, 2000)
     } else {
       let errorText = 'Erreur lors de l\'inscription'
+      const responseText = await response.text()
       try {
-        const errorData = await response.json()
-        errorText = errorData.message || errorText
+        const errorData = responseText ? JSON.parse(responseText) : {}
+        errorText = errorData.message || errorData.error || errorText
       } catch (jsonError) {
-        // If response is not JSON, use status text
-        errorText = response.statusText || errorText
+        errorText = responseText || response.statusText || errorText
       }
       errorMessage.value = errorText
     }
   } catch (error) {
-    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
+    if (error.name === 'AbortError') {
+      successMessage.value = 'La création a peut-être réussi. Essayez de vous connecter avec vos identifiants.'
+      setTimeout(() => router.push('/login'), 1500)
+    } else {
+      errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
+    }
     console.error('Registration error:', error)
   } finally {
     isLoading.value = false

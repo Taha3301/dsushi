@@ -19,7 +19,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div class="text-sm text-gray-500">Téléphone</div>
-              <div class="mt-1 font-semibold text-gray-900">52623310</div>
+              <div class="mt-1 font-semibold text-gray-900">24335305</div>
             </div>
             <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div class="text-sm text-gray-500">Email</div>
@@ -151,24 +151,28 @@ async function sendEmail(emailData) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000)
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailData),
-      signal: controller.signal
-    })
-    
-    clearTimeout(timeoutId)
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || `Erreur HTTP: ${response.status}`)
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData),
+        signal: controller.signal
+      })
+
+      const responseText = await response.text()
+      let responseData = {}
+      try { responseData = responseText ? JSON.parse(responseText) : {} } catch {}
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.message || responseText || `Erreur HTTP: ${response.status}`)
+      }
+
+      console.log('Email sent successfully:', responseData)
+    } finally {
+      clearTimeout(timeoutId)
     }
-    
-    const result = await response.json()
-    console.log('Email sent successfully:', result)
     
   } catch (error) {
     console.error(`Failed to send email to ${url}:`, error)
