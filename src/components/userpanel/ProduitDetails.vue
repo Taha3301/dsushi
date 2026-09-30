@@ -36,6 +36,10 @@
               {{ product.disponible ? 'Disponible' : 'Indisponible' }}
             </div>
           </div>
+          <div class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold" :class="getProductStock(product) > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+            <span class="h-2 w-2 rounded-full" :class="getProductStock(product) > 0 ? 'bg-green-600' : 'bg-red-600'"></span>
+            {{ getProductStockText(product) }}
+          </div>
           <div class="flex items-center gap-3 pt-2">
             <button
               @click="addToCart(product)"
@@ -138,6 +142,17 @@ const formatPrice = (num) => {
   const value = Number(num)
   if (Number.isNaN(value)) return '—'
   try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2 }).format(value) } catch { return `${value.toFixed(2)} ${CURRENCY}` }
+}
+
+function getProductStock(product) {
+  const stock = Number(product?.stock ?? product?.Stock ?? 0)
+  return Number.isFinite(stock) ? stock : 0
+}
+
+function getProductStockText(product) {
+  const stock = getProductStock(product)
+  if (stock <= 0) return 'Épuisé'
+  return `${stock} pièce${stock > 1 ? 's' : ''}`
 }
 
 const isLoading = ref(true)

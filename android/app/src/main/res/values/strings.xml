@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">D.Sushi</string>
+    <string name="title_activity_main">D.Sushi</string>
+    <string name="package_name">tn.dsushi.app</string>
+    <string name="custom_url_scheme">tn.dsushi.app</string>
+</resources>

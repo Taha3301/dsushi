@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuth } from '../stores/auth.js'
+import { api } from '../utils/api.js'
 
 const { user, userName, userEmail } = useAuth()
 
@@ -41,17 +42,35 @@ const setActiveTab = (tabId) => {
   successMessage.value = ''
 }
 
-// Initialize form with user data
-onMounted(() => {
-  if (user.value) {
-    profileForm.value = {
-      name: user.value.name || '',
-      email: user.value.email || '',
-      address: user.value.address || '',
-      phone: user.value.phone || ''
-    }
+function setProfileForm(profile) {
+  profileForm.value = {
+    name: profile.name || '',
+    email: profile.email || '',
+    address: profile.address || '',
+    phone: profile.phone || ''
   }
-})
+}
+
+async function loadProfile() {
+  if (!user.value?.token) return
+
+  try {
+    const response = await fetch(api('/api/Users/me'), {
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${user.value.token}`
+      },
+      cache: 'no-store'
+    })
+    if (!response.ok) throw new Error('Impossible de charger le profil.')
+    setProfileForm(await response.json())
+  } catch (error) {
+    console.error('Profile loading error:', error)
+    setProfileForm(user.value || {})
+  }
+}
+
+onMounted(loadProfile)
 
 const validatePassword = () => {
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
@@ -70,8 +89,16 @@ const handleUpdateProfile = async () => {
   successMessage.value = ''
   isUpdatingProfile.value = true
 
+  const requiredFields = ['name', 'email', 'address', 'phone']
+  const missingFields = requiredFields.filter(field => !profileForm.value[field]?.trim())
+  if (missingFields.length) {
+    errorMessage.value = 'Veuillez compléter votre nom, votre email, votre adresse exacte et votre téléphone.'
+    isUpdatingProfile.value = false
+    return
+  }
+
   try {
-    const response = await fetch('/api/Auth/update-profile', {
+    const response = await fetch(api('/api/Auth/update-profile'), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +113,24 @@ const handleUpdateProfile = async () => {
     })
 
     if (response.ok) {
-      successMessage.value = 'Profil mis à jour avec succès !'
+      const profileResponse = await fetch(api('/api/Users/me'), {
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Bearer ${user.value?.token}`
+        },
+        cache: 'no-store'
+      })
+      if (!profileResponse.ok) throw new Error('Profil envoyé, mais impossible de vérifier les informations enregistrées.')
+
+      const savedProfile = await profileResponse.json()
+      setProfileForm(savedProfile)
+      const missingSavedFields = requiredFields.filter(field => !savedProfile[field]?.trim())
+      if (missingSavedFields.length) {
+        const fieldLabels = { name: 'nom', email: 'email', address: 'adresse exacte', phone: 'téléphone' }
+        errorMessage.value = `Le profil a été envoyé, mais le ${fieldLabels[missingSavedFields[0]]} manque toujours dans les informations enregistrées. Réessayez, puis actualisez le checkout.`
+      } else {
+        successMessage.value = 'Profil mis à jour et vérifié avec succès !'
+      }
     } else {
       let errorText = 'Erreur lors de la mise à jour du profil'
       try {
@@ -98,7 +142,7 @@ const handleUpdateProfile = async () => {
       errorMessage.value = errorText
     }
   } catch (error) {
-    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
+    errorMessage.value = error.message || 'Erreur de connexion. Veuillez réessayer.'
     console.error('Profile update error:', error)
   } finally {
     isUpdatingProfile.value = false
@@ -116,7 +160,7 @@ const handleUpdatePassword = async () => {
   isUpdatingPassword.value = true
 
   try {
-    const response = await fetch('/api/Auth/update-password', {
+    const response = await fetch(api('/api/Auth/update-password'), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -258,6 +302,7 @@ const togglePasswordVisibility = (field) => {
                   id="address"
                   v-model="profileForm.address"
                   rows="3"
+                  required
                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 resize-none"
                   placeholder="Votre adresse complète"
                 ></textarea>
@@ -270,6 +315,7 @@ const togglePasswordVisibility = (field) => {
                   id="phone"
                   v-model="profileForm.phone"
                   type="tel"
+                  required
                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
                   placeholder="+216 12 345 678"
                 />

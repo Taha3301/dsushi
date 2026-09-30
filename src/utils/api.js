@@ -1,6 +1,8 @@
+import { Capacitor } from '@capacitor/core'
+
 const PROD_URL = "https://dsushi-be.onrender.com";
 // Use runtime check to be robust against build configuration issues
-const isLocal = typeof window !== 'undefined' && 
+const isLocal = !Capacitor.isNativePlatform() && typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || 
    window.location.hostname === '127.0.0.1' || 
    window.location.hostname.startsWith('192.168.') || 

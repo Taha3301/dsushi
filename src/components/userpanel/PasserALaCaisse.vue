@@ -1,41 +1,44 @@
 <template>
   <div class="min-h-screen bg-white">
     <!-- Header -->
-    <section class="sticky top-[64px] md:top-[64px] z-30 bg-white/90 backdrop-blur border-b border-gray-100">
+    <section class="bg-white/95 border-b border-gray-100">
       <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4">
-        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900">Passer à la caisse</h1>
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900">Finaliser votre commande</h1>
       </div>
     </section>
-
     <!-- Content -->
     <section class="py-4 sm:py-6 md:py-8">
-      <div class="mx-auto max-w-4xl px-3 sm:px-4 md:px-6 lg:px-8 space-y-4 sm:space-y-6">
+      <div class="mx-auto max-w-5xl px-3 sm:px-4 md:px-6 lg:px-8 space-y-4 sm:space-y-6">
         
         <!-- Section 1: User Information -->
-        <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-100 overflow-hidden">
+        <div ref="personalInfoSection" class="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-100 overflow-hidden">
           <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
             <h2 class="text-base sm:text-lg font-semibold text-gray-900">Informations personnelles</h2>
-            <button @click="loadUserInfo" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 self-start sm:self-auto">Rafraîchir</button>
+            <button @click="loadUserInfo" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 sm:min-h-10 sm:border-0 sm:bg-transparent sm:px-0 sm:text-sm sm:font-normal sm:text-gray-500 sm:hover:text-gray-800">Rafraîchir</button>
           </div>
-          <div class="px-4 sm:px-6 py-4">
+          <div class="px-4 sm:px-6 py-4 sm:py-5">
             <div v-if="isUserLoading" class="py-8 text-center text-gray-500">Chargement des informations...</div>
             <div v-else-if="userInfo" class="space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div class="sm:col-span-2 md:col-span-1">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div class="min-w-0">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nom</label>
-                  <div class="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.name || '—' }}</div>
+                  <div class="min-h-12 break-words [overflow-wrap:anywhere] px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.name || '—' }}</div>
                 </div>
-                <div class="sm:col-span-2 md:col-span-1">
+                <div class="min-w-0">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <div class="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base break-all">{{ userInfo.email || '—' }}</div>
+                  <div class="min-h-12 break-words [overflow-wrap:anywhere] px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.email || '—' }}</div>
                 </div>
-                <div class="sm:col-span-2 md:col-span-1">
+                <div class="min-w-0">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                  <div class="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.address || '—' }}</div>
+                  <div :class="['min-h-12 break-words [overflow-wrap:anywhere] px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-sm sm:text-base', isPlaceholderValue(userInfo.address) ? 'text-amber-700 italic' : 'text-gray-900']">
+                    {{ isPlaceholderValue(userInfo.address) ? 'Veuillez saisir votre adresse exacte (numéro, rue, quartier et ville).' : userInfo.address }}
+                  </div>
                 </div>
-                <div class="sm:col-span-2 md:col-span-1">
+                <div class="min-w-0">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                  <div class="px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.phone || '—' }}</div>
+                  <div :class="['min-h-12 break-words [overflow-wrap:anywhere] px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-sm sm:text-base', isPlaceholderValue(userInfo.phone) ? 'text-amber-700 italic' : 'text-gray-900']">
+                    {{ isPlaceholderValue(userInfo.phone) ? 'Veuillez saisir un numéro de téléphone joignable.' : userInfo.phone }}
+                  </div>
                 </div>
                 </div>
               
@@ -54,28 +57,6 @@
                 </div>
               </div>
               
-              <!-- Validation Checkbox and Modify Button -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                  <label class="flex items-start sm:items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    v-model="userInfoValidated" 
-                      class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded mt-0.5 sm:mt-0 flex-shrink-0"
-                  >
-                    <span class="ml-3 text-xs sm:text-sm font-medium text-gray-900 leading-tight sm:leading-normal">
-                    J'ai vérifié et validé mes informations personnelles
-                  </span>
-                </label>
-                <router-link 
-                  to="/settings" 
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 h-9 sm:h-10 text-xs sm:text-sm font-semibold text-gray-900 shadow-sm hover:border-gray-400 hover:bg-gray-50 self-start sm:self-auto"
-                >
-                    <svg class="w-3 sm:w-4 h-3 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
-                  </svg>
-                  Modifier
-                </router-link>
-                </div>
               </div>
             </div>
             <div v-else class="py-8 text-center text-gray-500">
@@ -88,6 +69,22 @@
                 <p>Impossible de charger les informations utilisateur</p>
                 <button @click="loadUserInfo" class="mt-2 text-red-600 hover:text-red-700 text-sm">Réessayer</button>
               </template>
+            </div>
+            <div class="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p class="min-w-0 text-xs text-gray-600 sm:text-sm">
+                Vérifiez que votre adresse de livraison et votre téléphone sont exacts.
+              </p>
+              <router-link
+                v-if="isAuthenticated"
+                ref="modifyProfileButton"
+                to="/settings"
+                class="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-900 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:scale-[0.98] sm:min-h-10 sm:self-auto"
+              >
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                </svg>
+                Modifier
+              </router-link>
             </div>
           </div>
         </div>
@@ -106,7 +103,7 @@
                 </svg>
                 Continuer mes achats
               </router-link>
-              <button @click="refreshCart" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800">Rafraîchir</button>
+              <button @click="refreshCart" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 sm:min-h-10 sm:border-0 sm:bg-transparent sm:px-0 sm:text-sm sm:font-normal sm:text-gray-500 sm:hover:text-gray-800">Rafraîchir</button>
             </div>
           </div>
           <div class="max-h-80 sm:max-h-96 overflow-auto">
@@ -129,12 +126,15 @@
                 <div class="flex-1 min-w-0">
                   <h3 class="text-sm sm:text-base font-semibold text-gray-900 truncate">{{ item.name }}</h3>
                   <p class="text-xs sm:text-sm text-gray-500">Prix unitaire: {{ Number(item.price).toFixed(2) }} DT</p>
+                  <p class="mt-1 text-[11px] sm:text-xs text-gray-500">
+                    Stock disponible: {{ itemDisplayPieces(item) }} pièce{{ itemDisplayPieces(item) > 1 ? 's' : '' }}
+                  </p>
                   <div class="mt-2 inline-flex items-center gap-2 sm:gap-3">
-                    <button @click="decrementItem(item)" class="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Diminuer">
+                    <button @click="decrementItem(item)" class="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:bg-gray-100" aria-label="Diminuer">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-3 sm:h-4 w-3 sm:w-4"><path d="M5 12.75a.75.75 0 010-1.5h14a.75.75 0 010 1.5H5z"/></svg>
                     </button>
                     <span class="text-xs sm:text-sm text-gray-700 min-w-[1.5rem] sm:min-w-[2rem] text-center font-medium">{{ item.quantity }}</span>
-                    <button @click="incrementItem(item)" class="h-7 w-7 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Augmenter">
+                    <button @click="incrementItem(item)" class="h-11 w-11 sm:h-9 sm:w-9 inline-flex items-center justify-center rounded-lg border border-gray-300 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:bg-gray-100" aria-label="Augmenter">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-3 sm:h-4 w-3 sm:w-4"><path d="M12.75 5a.75.75 0 00-1.5 0v6.25H5a.75.75 0 000 1.5h6.25V19a.75.75 0 001.5 0v-6.25H19a.75.75 0 000-1.5h-6.25V5z"/></svg>
                     </button>
                   </div>
@@ -143,7 +143,7 @@
                   <div class="text-right">
                     <div class="text-sm sm:text-lg font-bold text-gray-900">{{ (Number(item.price) * Number(item.quantity)).toFixed(2) }} DT</div>
                   </div>
-                  <button @click="deleteItem(item)" class="h-8 w-8 sm:h-10 sm:w-10 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-red-600" aria-label="Supprimer">
+                  <button @click="deleteItem(item)" class="h-11 w-11 sm:h-10 sm:w-10 inline-flex items-center justify-center rounded-lg border border-gray-300 text-gray-700 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:bg-red-100" aria-label="Supprimer">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 sm:h-5 w-4 sm:w-5"><path d="M9 3.75A1.5 1.5 0 0 1 10.5 2.25h3A1.5 1.5 0 0 1 15 3.75V4.5h4.5a.75.75 0 0 1 0 1.5H4.5a.75.75 0 0 1 0-1.5H9V3.75ZM6.75 7.5h10.5l-.69 11.044A2.25 2.25 0 0 1 14.318 20.75H9.682a2.25 2.25 0 0 1-2.242-2.206L6.75 7.5Z"/></svg>
                   </button>
                 </div>
@@ -168,6 +168,9 @@
               <input type="radio" v-model="paymentMethod" value="espece" checked class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 flex-shrink-0">
               <span class="ml-3 text-sm sm:text-base font-medium text-gray-900">Espèce (à la livraison)</span>
             </div>
+            <p class="mt-3 text-sm text-gray-600">
+              <span class="font-semibold text-gray-900">NOTE* :</span> Les frais de livraison varient entre 5 DT et 10 DT selon le kilométrage.
+            </p>
           </div>
         </div>
 
@@ -188,16 +191,16 @@
 
         <!-- Action Buttons -->
         <div v-if="cartItems.length > 0" class="flex flex-col sm:flex-row gap-3">
-          <router-link to="/produits" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 h-11 sm:h-12 text-sm font-semibold text-gray-900 shadow-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          <router-link to="/produits" class="flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-900 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:scale-[0.98]">
             Continuer les achats
           </router-link>
           <button 
             @click="confirmOrder" 
-            :disabled="isOrderProcessing || !userInfoValidated || !canOrder"
+            :disabled="isOrderProcessing || !canOrder || !isUserInfoValid"
             :class="[
-              'flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-4 h-11 sm:h-12 text-sm font-semibold shadow transition-all duration-200',
-              (!canOrder || !userInfoValidated || isOrderProcessing) 
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+              'flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:scale-[0.98]',
+              (!canOrder || !isUserInfoValid || isOrderProcessing)
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 : 'bg-red-600 text-white hover:bg-red-700'
             ]"
           >
@@ -209,10 +212,83 @@
               {{ 
                 isOrderProcessing ? 'Traitement...' : 
                 (!canOrder ? 'Commandes indisponibles' : 
-                (!userInfoValidated ? 'Validez vos infos (case à cocher)' : 'Finaliser la commande')) 
+                'Finaliser la commande')
               }}
             </span>
           </button>
+        </div>
+
+        <div
+          v-if="showOrderConfirmationModal"
+          class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/60 px-4 py-5"
+          role="presentation"
+        >
+          <section
+            class="w-full max-w-md max-h-[calc(100dvh-2.5rem)] overflow-y-auto rounded-xl bg-white p-5 shadow-2xl sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-confirmation-title"
+          >
+            <h2 id="order-confirmation-title" class="text-lg font-bold text-gray-900 sm:text-xl">
+              {{ isUserInfoValid ? 'Confirmer votre commande' : 'Informations à compléter' }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ isUserInfoValid ? 'Vérifiez les informations de livraison avant de confirmer.' : 'Complétez vos informations dans les paramètres avant de passer commande.' }}
+            </p>
+
+            <div v-if="!isUserInfoValid" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              {{ userInfoValidationMessage }}
+            </div>
+
+            <dl class="mt-5 divide-y divide-gray-100 rounded-lg border border-gray-200 px-4">
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Nom</dt>
+                <dd class="break-words text-gray-900">{{ userInfo?.name || 'Non renseigné' }}</dd>
+              </div>
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Email</dt>
+                <dd class="break-all text-gray-900">{{ userInfo?.email || 'Non renseigné' }}</dd>
+              </div>
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Adresse</dt>
+                <dd :class="['break-words', isPlaceholderValue(userInfo?.address) ? 'font-medium text-amber-800' : 'text-gray-900']">
+                  {{ isPlaceholderValue(userInfo?.address) ? 'À compléter' : userInfo.address }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Téléphone</dt>
+                <dd :class="['break-words', isPlaceholderValue(userInfo?.phone) ? 'font-medium text-amber-800' : 'text-gray-900']">
+                  {{ isPlaceholderValue(userInfo?.phone) ? 'À compléter' : userInfo.phone }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Paiement</dt>
+                <dd class="break-words text-gray-900">Espèce à la livraison</dd>
+              </div>
+            </dl>
+
+            <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                @click="modifyOrderInfo"
+                class="inline-flex min-h-12 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              >
+                Modifier mes informations
+              </button>
+              <button
+                type="button"
+                @click="placeOrder"
+                :disabled="isOrderProcessing || !isUserInfoValid || !canOrder"
+                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg v-if="isOrderProcessing" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                {{ isOrderProcessing ? 'Traitement...' : 'Confirmer la commande' }}
+              </button>
+            </div>
+          </section>
         </div>
 
       </div>
@@ -247,11 +323,14 @@ const { user, isAuthenticated } = useAuth()
 
 const isCartLoading = ref(false)
 const cartItems = ref([])
+const cartMutationQueues = new Map()
+const personalInfoSection = ref(null)
+const modifyProfileButton = ref(null)
 const isUserLoading = ref(false)
 const userInfo = ref(null)
 const paymentMethod = ref('espece')
 const comments = ref('')
-const userInfoValidated = ref(false)
+const showOrderConfirmationModal = ref(false)
 const isOrderProcessing = ref(false)
 const showNotification = ref(false)
 const notificationTotal = ref('')
@@ -298,6 +377,7 @@ async function loadCartFromServer() {
       name: i.productName,
       price: i.price,
       quantity: i.quantity,
+      stock: Number(i.stock ?? i.Stock ?? 0),
       image: ''
     }))
   } catch (e) {
@@ -310,53 +390,128 @@ async function loadCartFromServer() {
 
 const cartTotal = computed(() => cartItems.value.reduce((sum, i) => sum + (Number(i.price) * Number(i.quantity) || 0), 0))
 
+function getDisplayStockPieces(item) {
+  const quantity = Number(item?.quantity ?? 1)
+  const stockValue = Number(item?.stock ?? item?.Stock ?? 0)
+  const productStockValue = Number(item?.productStock ?? item?.product?.stock ?? item?.stock ?? 0)
+  const resolvedStock = productStockValue > 0 ? productStockValue : stockValue
+  const stockPieces = resolvedStock > 0 ? resolvedStock * quantity : quantity
+  return Number.isFinite(stockPieces) ? stockPieces : quantity
+}
+
+function itemDisplayPieces(item) {
+  return getDisplayStockPieces(item)
+}
+
+function isPlaceholderValue(value) {
+  const normalizedValue = String(value ?? '').trim().toLowerCase()
+  return !normalizedValue || normalizedValue === 'temp' || normalizedValue === 'string'
+}
+
 const isUserInfoValid = computed(() => {
   if (!userInfo.value) return false
-  const { name, email, address, phone } = userInfo.value
-  return !!(name && email && address && phone && 
-           name.trim() !== '' && email.trim() !== '' && 
-           address.trim() !== '' && phone.trim() !== '' &&
-           address !== 'temp' && phone !== 'temp')
+
+  const email = String(userInfo.value.email ?? '').trim()
+  const phone = String(userInfo.value.phone ?? '').trim()
+
+  const hasValidEmail = email.length > 0 && !isPlaceholderValue(email)
+  const hasValidPhone = phone.length > 0 && !isPlaceholderValue(phone)
+
+  return hasValidEmail && hasValidPhone
 })
 
 const userInfoValidationMessage = computed(() => {
   if (!userInfo.value) return 'Impossible de charger les informations utilisateur.'
-  
-  const { name, email, address, phone } = userInfo.value
+
+  const email = String(userInfo.value.email ?? '').trim()
+  const phone = String(userInfo.value.phone ?? '').trim()
   const missing = []
-  
-  if (!name || name.trim() === '') missing.push('Nom')
-  if (!email || email.trim() === '') missing.push('Email')
-  if (!address || address.trim() === '' || address === 'temp') missing.push('Adresse')
-  if (!phone || phone.trim() === '' || phone === 'temp') missing.push('Téléphone')
-  
+
+  if (!email || isPlaceholderValue(email)) {
+    missing.push('Email')
+  }
+
+  if (!phone || isPlaceholderValue(phone)) {
+    missing.push('Téléphone')
+  }
+
   if (missing.length === 0) return ''
-  
+
   if (missing.length === 1) {
     return `Veuillez compléter votre ${missing[0].toLowerCase()}.`
-  } else if (missing.length === 2) {
-    return `Veuillez compléter votre ${missing[0].toLowerCase()} et votre ${missing[1].toLowerCase()}.`
-  } else {
-    return `Veuillez compléter les champs suivants : ${missing.join(', ')}.`
   }
+
+  return `Veuillez compléter votre ${missing[0].toLowerCase()} et votre ${missing[1].toLowerCase()}.`
 })
 
 
 async function refreshCart() {
-  loadCartFromLocal()
-  const localCount = cartItems.value.length
-  if (user.value?.token && (localCount === 0 || localCount >= 3)) {
+  if (user.value?.token) {
     await loadCartFromServer()
+  } else {
+    loadCartFromLocal()
   }
   await ensureCartImages()
 }
 
-async function incrementItem(item) {
+function handleCartUpdated(event) {
+  if (Array.isArray(event?.detail?.items)) {
+    cartItems.value = event.detail.items
+    return
+  }
+  refreshCart()
+}
+
+function publishCartUpdate() {
+  window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: cartItems.value } }))
+}
+
+function applyQuantityDelta(item, delta) {
+  const existingItem = cartItems.value.find(cartItem => cartItem.productId === item.productId)
+  if (!existingItem) {
+    if (delta > 0) cartItems.value = [...cartItems.value, { ...item, quantity: delta }]
+    return
+  }
+
+  const nextQuantity = Number(existingItem.quantity) + delta
+  cartItems.value = nextQuantity > 0
+    ? cartItems.value.map(cartItem => cartItem.productId === item.productId
+      ? { ...cartItem, quantity: nextQuantity }
+      : cartItem)
+    : cartItems.value.filter(cartItem => cartItem.productId !== item.productId)
+}
+
+function queueCartMutation(productId, mutation) {
+  const previousMutation = cartMutationQueues.get(productId) || Promise.resolve()
+  const nextMutation = previousMutation.catch(() => {}).then(mutation)
+  cartMutationQueues.set(productId, nextMutation)
+  nextMutation.finally(() => {
+    if (cartMutationQueues.get(productId) === nextMutation) cartMutationQueues.delete(productId)
+  }).catch(() => {})
+  return nextMutation
+}
+
+function changeCartQuantity(item, delta) {
+  const existingItem = cartItems.value.find(cartItem => cartItem.productId === item.productId)
+  if (delta < 0 && (!existingItem || Number(existingItem.quantity) <= 0)) return
+
+  applyQuantityDelta(item, delta)
+  publishCartUpdate()
+
   const token = user.value?.token
   const customerId = token ? getCustomerIdFromToken(token) : null
-  if (token && customerId) {
+  if (!token || !customerId) {
     try {
-      const res = await fetch(api(`/api/cart/${customerId}/items`), {
+      localStorage.setItem('cart', JSON.stringify(cartItems.value))
+    } catch (error) {
+      console.error('Error saving local cart:', error)
+    }
+    return
+  }
+
+  queueCartMutation(item.productId, async () => {
+    const response = delta > 0
+      ? await fetch(api(`/api/cart/${customerId}/items`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -365,46 +520,24 @@ async function incrementItem(item) {
         },
         body: JSON.stringify({ productId: item.productId, quantity: 1 })
       })
-      if (!res.ok) throw new Error('increment failed')
-      await refreshCart()
-      window.dispatchEvent(new Event('cart-updated'))
-      return
-    } catch (e) { console.error(e) }
-  }
-  try {
-    const raw = localStorage.getItem('cart')
-    const cart = raw ? JSON.parse(raw) : []
-    const idx = cart.findIndex(i => i.productId === item.productId)
-    if (idx >= 0) cart[idx].quantity += 1; else cart.push({ ...item, quantity: 1 })
-    localStorage.setItem('cart', JSON.stringify(cart))
-    await refreshCart()
-    window.dispatchEvent(new Event('cart-updated'))
-  } catch (e) { console.error(e) }
-}
-
-async function decrementItem(item) {
-  const token = user.value?.token
-  const customerId = token ? getCustomerIdFromToken(token) : null
-  if (token && customerId) {
-    try {
-      const res = await fetch(api(`/api/cart/${customerId}/items/${item.productId}`), {
+      : await fetch(api(`/api/cart/${customerId}/items/${item.productId}`), {
         method: 'DELETE',
         headers: { 'accept': 'application/json', 'Authorization': `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('delete failed')
-      await refreshCart()
-      window.dispatchEvent(new Event('cart-updated'))
-      return
-    } catch (e) { console.error(e) }
-  }
-  try {
-    const raw = localStorage.getItem('cart')
-    const cart = raw ? JSON.parse(raw) : []
-    const next = cart.filter(i => i.productId !== item.productId)
-    localStorage.setItem('cart', JSON.stringify(next))
-    await refreshCart()
-    window.dispatchEvent(new Event('cart-updated'))
-  } catch (e) { console.error(e) }
+    if (!response.ok) throw new Error('Cart quantity update failed')
+  }).catch(error => {
+    console.error('Error updating cart quantity:', error)
+    applyQuantityDelta(item, -delta)
+    publishCartUpdate()
+  })
+}
+
+function incrementItem(item) {
+  changeCartQuantity(item, 1)
+}
+
+function decrementItem(item) {
+  changeCartQuantity(item, -1)
 }
 
 async function deleteItem(item) {
@@ -454,7 +587,8 @@ async function loadUserInfo() {
       headers: {
         'accept': '*/*',
         'Authorization': `Bearer ${token}`
-      }
+      },
+      cache: 'no-store'
     })
     if (!res.ok) throw new Error('Failed to fetch user info')
     userInfo.value = await res.json()
@@ -465,16 +599,6 @@ async function loadUserInfo() {
     isUserLoading.value = false
   }
 }
-
-// Validate user information
-function validateUserInfo() {
-  if (isUserInfoValid.value) {
-    userInfoValidated.value = true
-    // You could add a success message or visual feedback here
-    console.log('User information validated successfully')
-  }
-}
-
 
 async function fetchCanOrder() {
   try {
@@ -487,6 +611,21 @@ async function fetchCanOrder() {
   } catch (e) {
     console.error('Error fetching CanOrder:', e)
   }
+}
+
+function scrollToModifyButton() {
+  window.setTimeout(() => {
+    const target = modifyProfileButton.value?.$el || modifyProfileButton.value || personalInfoSection.value
+    if (!target) return
+
+    const bodyCanScroll = document.body.scrollHeight > document.body.clientHeight
+    const scrollContainer = bodyCanScroll
+      ? document.body
+      : document.scrollingElement || document.documentElement
+    const targetTop = target.getBoundingClientRect().top + scrollContainer.scrollTop
+    const visibleOffset = Math.max(100, window.innerHeight * 0.25)
+    scrollContainer.scrollTop = Math.max(0, targetTop - visibleOffset)
+  }, 100)
 }
 
 // Confirm order
@@ -503,17 +642,32 @@ async function confirmOrder() {
     return
   }
 
-  if (!userInfoValidated.value) {
-    if (!isUserInfoValid.value) {
-      alert(`Impossible de finaliser la commande. ${userInfoValidationMessage.value} Veuillez d'abord compléter vos informations dans les paramètres, puis cocher la case de validation.`)
-    } else {
-    alert('Veuillez valider vos informations personnelles en cochant la case de validation avant de finaliser la commande.')
-    }
+  await loadUserInfo()
+
+  if (!isUserInfoValid.value) {
+    showOrderConfirmationModal.value = true
     return
   }
 
   if (cartItems.value.length === 0) {
     alert('Votre panier est vide.')
+    return
+  }
+
+  showOrderConfirmationModal.value = true
+}
+
+function modifyOrderInfo() {
+  showOrderConfirmationModal.value = false
+  scrollToModifyButton()
+}
+
+async function placeOrder() {
+  showOrderConfirmationModal.value = false
+  const token = user.value?.token
+  const customerId = getCustomerIdFromToken(token)
+  if (!token || !customerId) {
+    alert('Vous devez être connecté pour finaliser votre commande.')
     return
   }
 
@@ -546,7 +700,6 @@ async function confirmOrder() {
     localStorage.removeItem('cart')
     cartItems.value = []
     comments.value = ''
-    userInfoValidated.value = false
     window.dispatchEvent(new Event('cart-updated'))
 
   } catch (error) {
@@ -568,13 +721,19 @@ async function ensureCartImages() {
       if (!res.ok) throw new Error('products fetch failed')
       cachedProducts = await res.json()
     }
-    const idToImg = new Map()
+    const productMap = new Map()
     for (const p of cachedProducts || []) {
-      if (p?.productId) idToImg.set(p.productId, Array.isArray(p.imageUrls) ? p.imageUrls[0] : '')
+      if (p?.productId) {
+        productMap.set(p.productId, {
+          image: Array.isArray(p.imageUrls) ? p.imageUrls[0] : '',
+          stock: Number(p.stock ?? p.Stock ?? 0)
+        })
+      }
     }
     cartItems.value = cartItems.value.map(i => ({
       ...i,
-      image: i.image || idToImg.get(i.productId) || ''
+      image: i.image || productMap.get(i.productId)?.image || '',
+      stock: Number(productMap.get(i.productId)?.stock ?? i.stock ?? i.Stock ?? 0)
     }))
   } catch (e) {
     console.error(e)
@@ -585,11 +744,11 @@ onMounted(() => {
   refreshCart()
   loadUserInfo()
   fetchCanOrder()
-  window.addEventListener('cart-updated', refreshCart)
+  window.addEventListener('cart-updated', handleCartUpdated)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('cart-updated', refreshCart)
+  window.removeEventListener('cart-updated', handleCartUpdated)
 })
   </script>
   

@@ -12,6 +12,8 @@ const showUserMenu = ref(false)
 const showCartMenu = ref(false)
 const isCartLoading = ref(false)
 const cartItems = ref([])
+const pendingCartItems = ref(new Set())
+const cartMutationQueues = new Map()
 const canOrder = ref(true)
 
 // Search state
@@ -105,6 +107,7 @@ async function loadCartFromServer() {
       name: i.productName,
       price: i.price,
       quantity: i.quantity,
+      stock: Number(i.stock ?? i.Stock ?? 0),
       image: ''
     }))
   } catch (e) {
@@ -118,14 +121,104 @@ async function loadCartFromServer() {
 const cartCount = computed(() => cartItems.value.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0))
 const cartTotal = computed(() => cartItems.value.reduce((sum, i) => sum + (Number(i.price) * Number(i.quantity) || 0), 0))
 
+function getDisplayStockPieces(item) {
+  const quantity = Number(item?.quantity ?? 1)
+  const stockValue = Number(item?.stock ?? item?.Stock ?? 0)
+  const productStockValue = Number(item?.productStock ?? item?.product?.stock ?? item?.stock ?? 0)
+  const resolvedStock = productStockValue > 0 ? productStockValue : stockValue
+  const stockPieces = resolvedStock > 0 ? resolvedStock * quantity : quantity
+  return Number.isFinite(stockPieces) ? stockPieces : quantity
+}
+
 async function refreshCart() {
-  // Strategy: if authenticated and (local empty OR local heavy >= 3 items) -> server; else local
-  loadCartFromLocal()
-  const localCount = cartItems.value.length
-  if (isAuthenticated.value && (localCount === 0 || localCount >= 3)) {
+  if (isAuthenticated.value) {
     await loadCartFromServer()
+  } else {
+    loadCartFromLocal()
   }
   await ensureCartImages()
+}
+
+function handleCartUpdated(event) {
+  if (Array.isArray(event?.detail?.items)) {
+    const existingImages = new Map(cartItems.value.map(item => [item.productId, item.image]))
+    cartItems.value = event.detail.items.map(item => ({
+      ...item,
+      image: item.image || existingImages.get(item.productId) || ''
+    }))
+    return
+  }
+  refreshCart()
+}
+
+function publishCartUpdate() {
+  window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: cartItems.value } }))
+}
+
+function applyQuantityDelta(item, delta) {
+  const existingItem = cartItems.value.find(cartItem => cartItem.productId === item.productId)
+  if (!existingItem) {
+    if (delta > 0) cartItems.value = [...cartItems.value, { ...item, quantity: delta }]
+    return
+  }
+
+  const nextQuantity = Number(existingItem.quantity) + delta
+  cartItems.value = nextQuantity > 0
+    ? cartItems.value.map(cartItem => cartItem.productId === item.productId
+      ? { ...cartItem, quantity: nextQuantity }
+      : cartItem)
+    : cartItems.value.filter(cartItem => cartItem.productId !== item.productId)
+}
+
+function queueCartMutation(productId, mutation) {
+  const previousMutation = cartMutationQueues.get(productId) || Promise.resolve()
+  const nextMutation = previousMutation.catch(() => {}).then(mutation)
+  cartMutationQueues.set(productId, nextMutation)
+  nextMutation.finally(() => {
+    if (cartMutationQueues.get(productId) === nextMutation) cartMutationQueues.delete(productId)
+  }).catch(() => {})
+  return nextMutation
+}
+
+function changeCartQuantity(item, delta) {
+  const existingItem = cartItems.value.find(cartItem => cartItem.productId === item.productId)
+  if (delta < 0 && (!existingItem || Number(existingItem.quantity) <= 0)) return
+
+  applyQuantityDelta(item, delta)
+  publishCartUpdate()
+
+  const token = user.value?.token
+  const customerId = token ? getCustomerIdFromToken(token) : null
+  if (!token || !customerId) {
+    try {
+      localStorage.setItem('cart', JSON.stringify(cartItems.value))
+    } catch (error) {
+      console.error('Error saving local cart:', error)
+    }
+    return
+  }
+
+  queueCartMutation(item.productId, async () => {
+    const response = delta > 0
+      ? await fetch(api(`/api/cart/${customerId}/items`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ productId: item.productId, quantity: 1 })
+      })
+      : await fetch(api(`/api/cart/${customerId}/items/${item.productId}`), {
+        method: 'DELETE',
+        headers: { 'accept': 'application/json', 'Authorization': `Bearer ${token}` }
+      })
+    if (!response.ok) throw new Error('Cart quantity update failed')
+  }).catch(error => {
+    console.error('Error updating cart quantity:', error)
+    applyQuantityDelta(item, -delta)
+    publishCartUpdate()
+  })
 }
 async function removeItem(item) {
   const token = user.value?.token
@@ -159,63 +252,12 @@ async function removeItem(item) {
   }
 }
 
-async function incrementItem(item) {
-  const token = user.value?.token
-  const customerId = token ? getCustomerIdFromToken(token) : null
-  if (token && customerId) {
-    try {
-      const res = await fetch(api(`/api/cart/${customerId}/items`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ productId: item.productId, quantity: 1 })
-      })
-      if (!res.ok) throw new Error('increment failed')
-      await refreshCart()
-      window.dispatchEvent(new Event('cart-updated'))
-      return
-    } catch (e) { console.error(e) }
-  }
-  try {
-    const raw = localStorage.getItem('cart')
-    const cart = raw ? JSON.parse(raw) : []
-    const idx = cart.findIndex(i => i.productId === item.productId)
-    if (idx >= 0) cart[idx].quantity += 1; else cart.push({ ...item, quantity: 1 })
-    localStorage.setItem('cart', JSON.stringify(cart))
-    await refreshCart()
-    window.dispatchEvent(new Event('cart-updated'))
-  } catch (e) { console.error(e) }
+function incrementItem(item) {
+  changeCartQuantity(item, 1)
 }
 
-async function decrementItem(item) {
-  const token = user.value?.token
-  const customerId = token ? getCustomerIdFromToken(token) : null
-  if (token && customerId) {
-    try {
-      // As requested: use DELETE to remove the item entirely
-      const res = await fetch(api(`/api/cart/${customerId}/items/${item.productId}`), {
-        method: 'DELETE',
-        headers: { 'accept': 'application/json', 'Authorization': `Bearer ${token}` }
-      })
-      if (!res.ok) throw new Error('delete failed')
-      await refreshCart()
-      window.dispatchEvent(new Event('cart-updated'))
-      return
-    } catch (e) { console.error(e) }
-  }
-  try {
-    const raw = localStorage.getItem('cart')
-    const cart = raw ? JSON.parse(raw) : []
-    const next = cart.filter(i => i.productId !== item.productId)
-    const cartChanged = JSON.stringify(next)
-    localStorage.setItem('cart', cartChanged)
-    localStorage.setItem('cart', JSON.stringify(cart))
-    await refreshCart()
-    window.dispatchEvent(new Event('cart-updated'))
-  } catch (e) { console.error(e) }
+function decrementItem(item) {
+  changeCartQuantity(item, -1)
 }
 
 // Delete item using /api/cart/{customerId}/products/{productId}
@@ -263,13 +305,19 @@ async function ensureCartImages() {
       if (!res.ok) throw new Error('products fetch failed')
       cachedProducts = await res.json()
     }
-    const idToImg = new Map()
+    const productMap = new Map()
     for (const p of cachedProducts || []) {
-      if (p?.productId) idToImg.set(p.productId, Array.isArray(p.imageUrls) ? p.imageUrls[0] : '')
+      if (p?.productId) {
+        productMap.set(p.productId, {
+          image: Array.isArray(p.imageUrls) ? p.imageUrls[0] : '',
+          stock: Number(p.stock ?? p.Stock ?? 0)
+        })
+      }
     }
     cartItems.value = cartItems.value.map(i => ({
       ...i,
-      image: i.image || idToImg.get(i.productId) || ''
+      image: i.image || productMap.get(i.productId)?.image || '',
+      stock: Number(productMap.get(i.productId)?.stock ?? i.stock ?? i.Stock ?? 0)
     }))
   } catch (e) {
     console.error(e)
@@ -349,12 +397,12 @@ onMounted(() => {
   window.addEventListener('scroll', handleScroll)
   refreshCart()
   fetchCanOrder()
-  window.addEventListener('cart-updated', refreshCart)
+  window.addEventListener('cart-updated', handleCartUpdated)
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('cart-updated', refreshCart)
+  window.removeEventListener('cart-updated', handleCartUpdated)
 })
 </script>
 
@@ -400,7 +448,7 @@ onUnmounted(() => {
                     <div class="text-sm font-semibold text-gray-900 truncate">{{ p.name }}</div>
                     <div class="text-xs text-gray-500 truncate">{{ p.category?.name || '—' }}</div>
                   </div>
-                  <div class="text-xs font-bold text-red-600 whitespace-nowrap">{{ Number(p.price).toFixed(2) }}</div>
+                  <div class="text-xs font-bold text-red-600 whitespace-nowrap">{{ Number(p.price).toFixed(2) }} DT</div>
                 </li>
               </ul>
               <div class="px-3 py-2 bg-gray-50/60 border-t border-gray-100">
@@ -409,11 +457,6 @@ onUnmounted(() => {
             </div>
           </div>
         </label>
-        <button type="button" aria-label="Menu" class="inline-flex h-10 w-10 items-center justify-center text-[#172033]">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6">
-            <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
       </div>
 
       <!-- Desktop row -->
@@ -456,7 +499,7 @@ onUnmounted(() => {
                       <div class="text-sm font-semibold text-gray-900 truncate">{{ p.name }}</div>
                       <div class="text-xs text-gray-500 truncate">{{ p.category?.name || '—' }}</div>
                     </div>
-                    <div class="text-sm font-bold text-red-600 whitespace-nowrap">{{ Number(p.price).toFixed(2) }}</div>
+                    <div class="text-sm font-bold text-red-600 whitespace-nowrap">{{ Number(p.price).toFixed(2) }} DT</div>
                   </li>
                 </ul>
                 <div class="px-4 py-2 bg-gray-50/60 border-t border-gray-100">
@@ -502,19 +545,22 @@ onUnmounted(() => {
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
+                      <div class="mt-1 text-[10px] text-gray-500">
+                        Stock: {{ getDisplayStockPieces(item) }} pièce{{ getDisplayStockPieces(item) > 1 ? 's' : '' }}
+                      </div>
                       <div class="mt-1 inline-flex items-center gap-2">
-                        <button @click="decrementItem(item)" class="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Diminuer">
+                        <button @click="decrementItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Diminuer">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><path d="M5 12.75a.75.75 0 010-1.5h14a.75.75 0 010 1.5H5z"/></svg>
                         </button>
                         <span class="text-xs text-gray-700 min-w-[1.25rem] text-center">{{ item.quantity }}</span>
-                        <button @click="incrementItem(item)" class="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Augmenter">
+                        <button @click="incrementItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-6 w-6 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Augmenter">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-3.5 w-3.5"><path d="M12.75 5a.75.75 0 00-1.5 0v6.25H5a.75.75 0 000 1.5h6.25V19a.75.75 0 001.5 0v-6.25H19a.75.75 0 000-1.5h-6.25V5z"/></svg>
                         </button>
                       </div>
                     </div>
                     <div class="flex items-center gap-3">
-                      <div class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ (Number(item.price) * Number(item.quantity)).toFixed(2) }}</div>
-                      <button @click="deleteItem(item)" class="h-8 w-8 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Supprimer">
+                      <div class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ (Number(item.price) * Number(item.quantity)).toFixed(2) }} DT</div>
+                      <button @click="deleteItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-8 w-8 inline-flex items-center justify-center rounded border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Supprimer">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M9 3.75A1.5 1.5 0 0 1 10.5 2.25h3A1.5 1.5 0 0 1 15 3.75V4.5h4.5a.75.75 0 0 1 0 1.5H4.5a.75.75 0 0 1 0-1.5H9V3.75ZM6.75 7.5h10.5l-.69 11.044A2.25 2.25 0 0 1 14.318 20.75H9.682a2.25 2.25 0 0 1-2.242-2.206L6.75 7.5Z"/></svg>
                       </button>
                     </div>
@@ -523,7 +569,7 @@ onUnmounted(() => {
               </div>
               <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between" v-if="cartItems.length > 0">
                 <span class="text-sm text-gray-600">Total estimé</span>
-                <span class="text-sm font-bold text-gray-900">{{ cartTotal.toFixed(2) }}</span>
+                <span class="text-sm font-bold text-gray-900">{{ cartTotal.toFixed(2) }} DT</span>
               </div>
               <div class="px-4 pb-3" v-if="cartItems.length > 0">
                 <router-link 
@@ -713,19 +759,22 @@ onUnmounted(() => {
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium text-gray-900 truncate">{{ item.name }}</div>
+              <div class="mt-1 text-[10px] text-gray-500">
+                Stock: {{ getDisplayStockPieces(item) }} pièce{{ getDisplayStockPieces(item) > 1 ? 's' : '' }}
+              </div>
               <div class="mt-1 inline-flex items-center gap-2">
-                <button @click="decrementItem(item)" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Diminuer">
+                <button @click="decrementItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Diminuer">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M5 12.75a.75.75 0 010-1.5h14a.75.75 0 010 1.5H5z"/></svg>
                 </button>
                 <span class="text-xs text-gray-700 min-w-[1.25rem] text-center font-semibold">{{ item.quantity }}</span>
-                <button @click="incrementItem(item)" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Augmenter">
+                <button @click="incrementItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50" aria-label="Augmenter">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M12.75 5a.75.75 0 00-1.5 0v6.25H5a.75.75 0 000 1.5h6.25V19a.75.75 0 001.5 0v-6.25H19a.75.75 0 000-1.5h-6.25V5z"/></svg>
                 </button>
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <div class="text-sm font-semibold text-gray-900">{{ (Number(item.price) * Number(item.quantity)).toFixed(2) }} €</div>
-              <button @click="deleteItem(item)" class="h-8 w-8 inline-flex items-center justify-center rounded-full border border-gray-200 text-red-400 hover:bg-red-50" aria-label="Supprimer">
+              <div class="text-sm font-semibold text-gray-900">{{ (Number(item.price) * Number(item.quantity)).toFixed(2) }} DT</div>
+              <button @click="deleteItem(item)" :disabled="pendingCartItems.has(item.productId)" :class="{ 'opacity-50 cursor-wait': pendingCartItems.has(item.productId) }" class="h-8 w-8 inline-flex items-center justify-center rounded-full border border-gray-200 text-red-400 hover:bg-red-50" aria-label="Supprimer">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M9 3.75A1.5 1.5 0 0 1 10.5 2.25h3A1.5 1.5 0 0 1 15 3.75V4.5h4.5a.75.75 0 0 1 0 1.5H4.5a.75.75 0 0 1 0-1.5H9V3.75ZM6.75 7.5h10.5l-.69 11.044A2.25 2.25 0 0 1 14.318 20.75H9.682a2.25 2.25 0 0 1-2.242-2.206L6.75 7.5Z"/></svg>
               </button>
             </div>
@@ -735,7 +784,7 @@ onUnmounted(() => {
       <div class="px-4 py-3 border-t border-gray-100" v-if="cartItems.length > 0">
         <div class="flex items-center justify-between mb-3">
           <span class="text-sm text-gray-600">Total estimé</span>
-          <span class="text-base font-bold text-gray-900">{{ cartTotal.toFixed(2) }} €</span>
+          <span class="text-base font-bold text-gray-900">{{ cartTotal.toFixed(2) }} DT</span>
         </div>
         <router-link
           :to="canOrder ? '/passer-a-la-caisse' : '#'"

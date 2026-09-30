@@ -76,33 +76,58 @@
       </div>
     </div>
 
+    <img
+      :key="heroSlideIndex"
+      class="mobile-hero-photo"
+      :src="heroImage"
+      alt="Sushis frais"
+    />
+
     <div class="w-full max-w-7xl mx-auto px-4 md:px-6 text-center relative z-10 pt-2 md:pt-2">
       <div class="space-y-4 md:space-y-6">
         <!-- Animated Title -->
-        <h1 class="text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900 animate-fade-in-up px-4 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 leading-tight">
+        <p class="hero-kicker">Sushi frais <span>•</span> Saveurs authentiques</p>
+        <h1 class="desktop-hero-title text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900 animate-fade-in-up px-4 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 leading-tight">
           <span>Sushis maison à</span>
-          <span class="text-red-600 animate-pulse">Djerba</span>
+          <span class="text-red-600">Djerba</span>
         </h1>
-        <p class="mobile-hero-tagline">Le goût du fait maison</p>
+        <h1 class="mobile-hero-title text-3xl md:text-5xl lg:text-7xl font-bold text-gray-900 animate-fade-in-up px-4 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 leading-tight">
+          <span>Le vrai goût du</span>
+          <span class="text-red-600">Japon à Djerba</span>
+        </h1>
+        <p class="mobile-hero-tagline">Des sushis préparés avec des ingrédients frais, dans le respect de la tradition japonaise.</p>
 
         <!-- High-Impact CTA Buttons (Now higher up) -->
-        <div class="flex flex-row gap-4 justify-center items-center animate-fade-in-up-delay mt-2">
+        <div class="hero-actions flex flex-row gap-4 justify-center items-center animate-fade-in-up-delay mt-2">
           <button @click="goToProduits" class="hidden md:block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-sm md:text-base transition-all duration-300 transform hover:scale-105 shadow-lg">
-            Commander Maintenant
+            Commander maintenant
           </button>
           <button @click="openMenuPopup" class="border-2 border-gray-700 hover:border-red-600 text-gray-700 hover:text-red-600 font-semibold py-3 px-8 rounded-full text-sm md:text-base transition-all duration-300 transform hover:scale-105">
             Voir le Menu
           </button>
         </div>
+
+        <div class="hero-pagination" aria-label="Choisir une image du carrousel">
+          <button
+            v-for="slideIndex in 3"
+            :key="slideIndex"
+            type="button"
+            :class="{ active: heroSlideIndex === slideIndex - 1 }"
+            :aria-label="`Afficher le visuel ${slideIndex}`"
+            :aria-pressed="heroSlideIndex === slideIndex - 1"
+            @click="selectHeroSlide(slideIndex - 1)"
+          ></button>
+        </div>
         
         <!-- Category Filter -->
-        <div class="flex items-center md:justify-center gap-3 overflow-x-auto pb-4 no-scrollbar px-4 animate-fade-in-up-delay">
+        <div class="hero-category-list flex items-center md:justify-center gap-3 overflow-x-auto pb-4 no-scrollbar px-4 animate-fade-in-up-delay">
           <button 
             class="showcase-cat-pill" 
             :class="{ active: !selectedCategory }"
             @click="selectedCategory = ''"
           >
-            Tous
+            <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>
+            <span>Tous</span>
           </button>
           <button 
             v-for="cat in categories" 
@@ -111,11 +136,22 @@
             :class="{ active: selectedCategory === cat.categoryId }"
             @click="selectedCategory = cat.categoryId"
           >
-            {{ categoryLabel(cat.name) }}
+            <svg v-if="categoryLabel(cat.name) === 'Crunchy'" class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M6 9.5h12M7 14.5h10M9 6.5l1 3M15 14.5l1 3"/></svg>
+            <svg v-else-if="categoryLabel(cat.name) === 'California'" class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 7.5v9M7.5 12h9"/></svg>
+            <svg v-else-if="categoryLabel(cat.name) === 'Makis'" class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="12" r="5.5"/><circle cx="16" cy="12" r="5.5"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>
+            <svg v-else-if="categoryLabel(cat.name) === 'Sushi Crus'" class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11c1.5-3 14.5-3 16 0v7H4z"/><path d="M4 12h16M8 8l1-2M16 8l-1-2"/></svg>
+            <svg v-else-if="categoryLabel(cat.name) === 'Boxs'" class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m3.5 8 8.5-4.5L20.5 8v9L12 21l-8.5-4z"/><path d="M3.5 8 12 13l8.5-5M12 13v8M8 5.5l8.5 5"/></svg>
+            <svg v-else class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10.5 12 5l8 5.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M8 13h8M9 16h6"/></svg>
+            <span>{{ categoryLabel(cat.name) }}</span>
           </button>
         </div>
 
         <!-- Product Slider -->
+        <div class="showcase-heading">
+          <h2>Nos meilleures créations</h2>
+          <button @click="goToProduits">Voir tout <span aria-hidden="true">→</span></button>
+        </div>
+
         <div class="showcase-slider-wrapper relative group mt-8 w-full overflow-hidden">
           <!-- Navigation Buttons -->
           <button 
@@ -126,13 +162,26 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
           </button>
 
-          <div class="showcase-track" ref="showcaseTrackRef">
+          <div
+            class="showcase-track"
+            :class="{
+              'is-dragging': isShowcaseDragging,
+              'has-next-preview': filteredProducts.length > 2,
+              'single-product': filteredProducts.length === 1
+            }"
+            ref="showcaseTrackRef"
+            @pointerdown="startShowcaseDrag"
+            @pointermove="moveShowcaseDrag"
+            @pointerup="endShowcaseDrag"
+            @pointercancel="endShowcaseDrag"
+            @lostpointercapture="endShowcaseDrag"
+          >
             <div 
               v-for="(p, i) in filteredProducts" 
               :key="p.productId"
               class="showcase-card animate-fade-in-up"
               :style="{ animationDelay: `${0.2 + i * 0.1}s` }"
-              @click="goToProduct(p)"
+              @click="goToProduct(p, $event)"
             >
               <div class="showcase-card-img-wrap relative overflow-hidden">
                 <img 
@@ -144,6 +193,21 @@
                   @error="$event.target.src = 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22100%%22 height=%22100%%22 fill=%22%23f3f4f6%22/><text x=%2250%%22 y=%2250%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22Arial%22 font-size=%2224%22 fill=%22%239ca3af%22>🍣</text></svg>'"
                 />
                 <div v-else class="showcase-card-img showcase-card-img--placeholder">🍣</div>
+                <span class="showcase-product-badge">
+                  {{ i === 0 ? 'Populaire' : (categoryLabel(p.category?.name || '') || 'Création') }}
+                </span>
+
+                <button
+                  class="showcase-favorite-btn"
+                  :class="{ active: favoriteProductIds.has(p.productId) }"
+                  :aria-label="favoriteProductIds.has(p.productId) ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+                  :aria-pressed="favoriteProductIds.has(p.productId)"
+                  @click.stop="toggleFavorite(p)"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M20.8 8.8c0 5.2-8.8 10-8.8 10s-8.8-4.8-8.8-10A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z"/>
+                  </svg>
+                </button>
                 
                 <!-- Quick Add to Cart (On Image for Premium Look) -->
                 <button 
@@ -161,8 +225,12 @@
                 </div>
               </div>
               <div class="showcase-card-info">
-                <h3 class="showcase-card-name truncate">{{ p.name }}</h3>
+                <h3 class="showcase-card-name">{{ p.name }}</h3>
+                <p v-if="p.description" class="showcase-card-description">{{ p.description }}</p>
                 <p class="showcase-card-price">{{ formatPrice(p.price) }}</p>
+                <div class="showcase-card-stock" :class="{ 'showcase-card-stock--empty': getProductStockText(p) === 'Épuisé' }">
+                  {{ getProductStockText(p) }}
+                </div>
               </div>
             </div>
           </div>
@@ -376,7 +444,7 @@
   <!-- Section 3: L'expérience D.Sushi -->
   <section class="py-12 md:py-24 relative overflow-hidden">
     <!-- Background Elements -->
-    <div class="absolute inset-0 bg-[#E3E3E3]"></div>
+    <div class="absolute inset-0 bg-black"></div>
     <div class="absolute inset-0 opacity-10">
       <div class="absolute top-20 left-20 w-32 h-32 bg-red-500 rounded-full blur-3xl"></div>
       <div class="absolute bottom-20 right-20 w-40 h-40 bg-red-600 rounded-full blur-3xl"></div>
@@ -576,6 +644,12 @@ const formatPrice = (num) => {
   catch { return `${v.toFixed(2)} ${CURRENCY}` }
 }
 
+function getProductStockText(product) {
+  const stock = Number(product?.stock ?? product?.Stock ?? 0)
+  if (!Number.isFinite(stock) || stock <= 0) return 'Épuisé'
+  return `${stock} pièce${stock > 1 ? 's' : ''}`
+}
+
 const isMenuModalOpen = ref(false)
 const currentSlideIndex = ref(0)
 const router = useRouter()
@@ -584,6 +658,14 @@ const allProducts = ref([])
 const categories = ref([])
 const selectedCategory = ref('')
 const showcaseTrackRef = ref(null)
+const favoriteProductIds = ref(new Set())
+const isShowcaseDragging = ref(false)
+const heroSlideIndex = ref(0)
+let heroSlideTimer = null
+let showcaseDragStartX = 0
+let showcaseDragStartScroll = 0
+let showcaseDragMoved = false
+let suppressShowcaseClickUntil = 0
 
 // Helper: Extract customerId from JWT (shared logic from AltNavbar)
 function getCustomerIdFromToken(token) {
@@ -635,6 +717,23 @@ const filteredProducts = computed(() => {
   ).slice(0, 20)
 })
 
+const heroImage = computed(() => {
+  const product = allProducts.value[heroSlideIndex.value % Math.max(allProducts.value.length, 1)]
+  return resolveImage(product?.imageUrls?.[0], 600)
+})
+
+function advanceHeroSlide() {
+  heroSlideIndex.value = (heroSlideIndex.value + 1) % 3
+}
+
+function selectHeroSlide(index) {
+  heroSlideIndex.value = index
+  if (heroSlideTimer) {
+    clearInterval(heroSlideTimer)
+    heroSlideTimer = window.setInterval(advanceHeroSlide, 5200)
+  }
+}
+
 function categoryLabel(name) {
   const value = String(name || '').toLowerCase()
   if (value.includes('crunchy')) return 'Crunchy'
@@ -665,7 +764,49 @@ function scrollShowcase(direction) {
   showcaseTrackRef.value.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' })
 }
 
-function goToProduct(p) {
+function toggleFavorite(product) {
+  const nextFavorites = new Set(favoriteProductIds.value)
+  if (nextFavorites.has(product.productId)) nextFavorites.delete(product.productId)
+  else nextFavorites.add(product.productId)
+  favoriteProductIds.value = nextFavorites
+}
+
+function startShowcaseDrag(event) {
+  if (event.pointerType !== 'mouse' || event.button !== 0) return
+  if (event.target instanceof Element && event.target.closest('button')) return
+  const track = showcaseTrackRef.value
+  if (!track) return
+
+  showcaseDragStartX = event.clientX
+  showcaseDragStartScroll = track.scrollLeft
+  showcaseDragMoved = false
+  isShowcaseDragging.value = true
+  track.setPointerCapture(event.pointerId)
+}
+
+function moveShowcaseDrag(event) {
+  if (!isShowcaseDragging.value || !showcaseTrackRef.value) return
+  const distance = event.clientX - showcaseDragStartX
+  if (Math.abs(distance) > 4) showcaseDragMoved = true
+  if (showcaseDragMoved) {
+    event.preventDefault()
+    showcaseTrackRef.value.scrollLeft = showcaseDragStartScroll - distance
+  }
+}
+
+function endShowcaseDrag(event) {
+  if (!isShowcaseDragging.value) return
+  isShowcaseDragging.value = false
+  if (showcaseDragMoved) suppressShowcaseClickUntil = Date.now() + 300
+  const track = showcaseTrackRef.value
+  if (track?.hasPointerCapture(event.pointerId)) track.releasePointerCapture(event.pointerId)
+}
+
+function goToProduct(p, event) {
+  if (Date.now() < suppressShowcaseClickUntil) {
+    event?.preventDefault()
+    return
+  }
   router.push({ path: '/produit-details', query: { id: p.productId } })
 }
 
@@ -708,6 +849,7 @@ function handleKeydown(event) {
 onMounted(() => {
   loadProducts()
   loadCategories()
+  heroSlideTimer = window.setInterval(advanceHeroSlide, 5200)
   window.addEventListener('keydown', handleKeydown)
   
   // Intersection Observer for Videos
@@ -727,6 +869,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (heroSlideTimer) clearInterval(heroSlideTimer)
   window.removeEventListener('keydown', handleKeydown)
 })
 </script>
@@ -1254,10 +1397,54 @@ button:hover {
   margin-bottom: 4px;
 }
 
+.showcase-card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 4px 0 8px;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .showcase-card-price {
   color: #dc2626;
   font-weight: 800;
   font-size: 1.1rem;
+}
+
+.showcase-card-stock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #166534;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.showcase-card-stock--empty {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.showcase-card-stock-badge {
+  background: rgba(22, 101, 52, 0.12);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.showcase-card-stock--empty .showcase-card-stock-badge {
+  background: rgba(153, 27, 27, 0.12);
 }
 
 .showcase-nav-btn {
@@ -1355,6 +1542,10 @@ button:hover {
 
 /* Mobile landing layout */
 @media (max-width: 640px) {
+  .hero-section h1.desktop-hero-title {
+    display: none !important;
+  }
+
   .hero-section {
     padding: 18px 0 104px !important;
     background: #E3E3E3 !important;
@@ -1641,6 +1832,14 @@ button:hover {
 }
 
 /* Mobile reference layout: image-led hero with compact menu browsing. */
+.desktop-hero-title {
+  display: none;
+}
+
+.mobile-hero-photo {
+  display: none;
+}
+
 .mobile-hero-tagline {
   display: none;
 }
@@ -1733,6 +1932,8 @@ button:hover {
 
   .hero-section .flex.items-center.md\:justify-center {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    overflow-x: visible;
     gap: 8px;
     margin: 26px -18px 0;
     padding: 0 18px 4px;
@@ -1762,6 +1963,7 @@ button:hover {
   .showcase-slider-wrapper {
     margin: 8px -18px 0 !important;
     padding: 0 18px;
+    min-height: 300px;
   }
 
   .showcase-nav-btn {
@@ -1806,6 +2008,513 @@ button:hover {
   .showcase-card .absolute.bottom-3 {
     background: #dc2626;
     color: #fff;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    min-height: 0 !important;
+    padding: 10px 0 16px !important;
+    color: #142238;
+    background: #f7f7f6 !important;
+  }
+
+  .hero-section::before {
+    display: none;
+  }
+
+  .mobile-hero-photo {
+    position: absolute;
+    top: 104px;
+    right: -26px;
+    z-index: 0;
+    display: block;
+    width: 57%;
+    height: 168px;
+    border-radius: 48% 0 0 48%;
+    object-fit: cover;
+    object-position: center;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 28%);
+    mask-image: linear-gradient(to right, transparent, #000 28%);
+    pointer-events: none;
+    animation: hero-photo-enter 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .hero-section > .w-full {
+    padding: 0 18px;
+    text-align: left;
+  }
+
+  .hero-kicker {
+    position: relative;
+    z-index: 1;
+    margin: 9px 0 0;
+    color: #f4511e;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .hero-kicker span {
+    padding: 0 4px;
+  }
+
+  .hero-section h1 {
+    position: relative;
+    z-index: 1;
+    width: 74%;
+    margin: 8px 0 0;
+    padding: 0;
+    color: #142238 !important;
+    font-size: 1.85rem !important;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    text-align: left;
+  }
+
+  .hero-section h1 span {
+    display: block;
+  }
+
+  .hero-section h1 span:last-child {
+    margin-top: 2px;
+    color: #f4511e !important;
+    font-size: 1.85rem !important;
+  }
+
+  .mobile-hero-tagline {
+    position: relative;
+    z-index: 1;
+    width: 55%;
+    margin: 9px 0 0;
+    color: #738096;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .hero-actions {
+    position: relative;
+    z-index: 1;
+    justify-content: flex-start;
+    margin-top: 16px !important;
+  }
+
+  .hero-actions button:first-child {
+    display: inline-flex !important;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 999px;
+    background: #ff5722 !important;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(244, 81, 30, 0.2);
+  }
+
+  .hero-actions button:last-child {
+    display: none;
+  }
+
+  .hero-pagination {
+    display: flex;
+    position: relative;
+    z-index: 1;
+    gap: 8px;
+    margin: 13px 0 0 2px;
+  }
+
+  .hero-pagination button {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #d7d9dc;
+    cursor: pointer;
+    transition: width 220ms ease, background-color 220ms ease, transform 220ms ease;
+  }
+
+  .hero-pagination button.active {
+    width: 22px;
+    border-radius: 999px;
+    background: #ff5722;
+  }
+
+  .hero-pagination button:focus-visible {
+    outline: 2px solid #142238;
+    outline-offset: 3px;
+  }
+
+  .hero-category-list {
+    position: relative;
+    z-index: 1;
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+    margin: 22px -18px 0;
+    padding: 0 18px 6px !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hero-category-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-category-list .showcase-cat-pill {
+    display: flex;
+    flex: 0 0 56px;
+    min-width: 56px;
+    height: 56px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 3px 1px;
+    border: 1px solid #eceef0;
+    border-radius: 12px;
+    background: #fff;
+    color: #142238;
+    font-size: 0.55rem;
+    font-weight: 600;
+    box-shadow: 0 5px 14px rgba(20, 34, 56, 0.06);
+  }
+
+  .hero-section .hero-category-list.flex {
+    flex-wrap: nowrap !important;
+  }
+
+  .hero-category-list .showcase-cat-pill.active {
+    border-color: #ff5722;
+    background: #ff5722;
+    color: #fff;
+    box-shadow: 0 7px 15px rgba(244, 81, 30, 0.2);
+  }
+
+  .category-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+
+  .showcase-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 14px 2px 0;
+    text-align: left;
+  }
+
+  .showcase-heading h2 {
+    margin: 0;
+    color: #142238;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .showcase-heading button {
+    flex: 0 0 auto;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: #ff5722;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .showcase-heading button span {
+    padding-left: 4px;
+  }
+
+  .showcase-slider-wrapper {
+    min-height: 0;
+    width: calc(100% + 36px) !important;
+    box-sizing: border-box;
+    margin: 4px -18px 0 !important;
+    padding: 0 0 0 18px;
+  }
+
+  .showcase-track {
+    gap: 12px;
+    padding: 10px 0 18px;
+    scroll-padding-left: 18px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .showcase-track.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
+
+  .showcase-card {
+    display: flex;
+    flex: 0 0 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+    min-height: 0;
+    flex-direction: column;
+    border: 1px solid rgba(20, 34, 56, 0.06);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(20, 34, 56, 0.1);
+  }
+
+  .showcase-track.has-next-preview .showcase-card {
+    flex-basis: 45%;
+    max-width: 45%;
+  }
+
+  .showcase-track.single-product .showcase-card {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+
+  .showcase-card-img-wrap {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  .showcase-card-info {
+    min-height: 104px;
+    gap: 4px;
+    justify-content: flex-start;
+    padding: 9px 10px 11px;
+    background: #fff;
+    text-align: left;
+  }
+
+  .showcase-card-name {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #142238;
+    font-size: 0.78rem;
+    font-weight: 750;
+    line-height: 1.2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .showcase-card-description {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    color: #738096;
+    font-size: 0.62rem;
+    line-height: 1.35;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .showcase-card-price {
+    color: #ff5722;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .showcase-card-stock {
+    display: none;
+  }
+
+  .showcase-product-badge {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    z-index: 2;
+    padding: 5px 9px;
+    border: 1px solid #48d8cc;
+    border-radius: 999px;
+    background: rgba(10, 28, 32, 0.82);
+    color: #70eee3;
+    font-size: 0.58rem;
+    font-weight: 700;
+  }
+
+  .showcase-favorite-btn {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    z-index: 3;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: rgba(10, 24, 32, 0.62);
+    color: #fff;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+  }
+
+  .showcase-favorite-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .showcase-favorite-btn.active {
+    background: #fff;
+    color: #ff5722;
+  }
+
+  .showcase-favorite-btn.active svg {
+    fill: currentColor;
+  }
+
+  .showcase-card .absolute.bottom-3 {
+    right: 8px;
+    bottom: 8px;
+    width: 34px;
+    height: 34px;
+    background: #ff5722;
+    color: #fff;
+  }
+
+  .showcase-card .absolute.bottom-3 svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .landing-fab {
+    display: none;
+  }
+}
+
+@keyframes hero-photo-enter {
+  from {
+    opacity: 0.45;
+    transform: translateX(10px) scale(1.025);
+    filter: saturate(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: saturate(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-hero-photo {
+    animation: none;
+  }
+}
+
+@media (min-width: 641px) {
+  .desktop-hero-title {
+    display: flex !important;
+    gap: 14px !important;
+    margin: 38px 0 28px;
+    font-size: 4rem !important;
+    line-height: 1.05;
+    letter-spacing: 0;
+  }
+
+  .mobile-hero-title,
+  .hero-kicker,
+  .mobile-hero-tagline,
+  .hero-pagination,
+  .mobile-hero-photo {
+    display: none !important;
+  }
+
+  .hero-section {
+    min-height: 85vh;
+    padding: 20px 0 36px !important;
+  }
+
+  .hero-section > .w-full {
+    max-width: 1160px;
+    padding: 0 24px;
+    zoom: 1.05;
+  }
+
+  .hero-category-list {
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin: 22px auto 14px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .hero-category-list .showcase-cat-pill {
+    display: inline-flex;
+    min-height: 39px;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 8px 22px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+  }
+
+  .hero-category-list .category-icon {
+    display: none;
+  }
+
+  .showcase-heading {
+    display: none;
+  }
+
+  .showcase-slider-wrapper {
+    min-height: 0;
+    margin: 0 auto;
+    padding: 0 50px;
+  }
+
+  .showcase-track {
+    gap: 22px;
+    align-items: stretch;
+  }
+
+  .showcase-card {
+    border-radius: 20px;
+  }
+
+  .showcase-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .showcase-card-info {
+    min-height: 104px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .showcase-card-name {
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+
+  .showcase-card-description,
+  .showcase-product-badge,
+  .showcase-favorite-btn {
+    display: none !important;
+  }
+
+  .showcase-card-price {
+    margin: 0;
+    color: #ed1c24;
+    font-size: 1.05rem;
+  }
+
+  .showcase-card-stock {
+    margin-top: 8px;
+    padding: 5px 9px;
+    font-size: 0.65rem;
   }
 }
 </style>

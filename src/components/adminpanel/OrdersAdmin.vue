@@ -239,6 +239,20 @@
                 </div>
               </div>
 
+              <div class="mb-4 max-w-xs">
+                <label :for="`delivery-fee-${order.orderId}`" class="mb-1 block text-xs sm:text-sm font-medium text-gray-700">Frais de livraison (DT)</label>
+                <input
+                  :id="`delivery-fee-${order.orderId}`"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  :value="deliveryFees[order.orderId] ?? ''"
+                  @input="saveDeliveryFee(order.orderId, $event.target.value)"
+                  placeholder="0.00"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
               <!-- Comments -->
               <div v-if="order.comments" class="mb-4 p-3 bg-blue-50 rounded-lg">
                 <h4 class="text-xs sm:text-sm font-medium text-blue-800 mb-1">Commentaires:</h4>
@@ -530,6 +544,8 @@ const notificationMessage = ref('')
 const isUpdatingStatus = ref({})
 const isDeletingOrder = ref({})
 const isGeneratingInvoice = ref({})
+const deliveryFees = ref({})
+const deliveryFeesStorageKey = 'dsushi-admin-delivery-fees'
 
 // Delete modal state
 const showDeleteModal = ref(false)
@@ -686,6 +702,11 @@ async function loadOrders() {
     
     const data = await response.json()
     orders.value = Array.isArray(data) ? data : []
+    const savedDeliveryFees = JSON.parse(localStorage.getItem(deliveryFeesStorageKey) || '{}')
+    deliveryFees.value = Object.fromEntries(orders.value.map(order => [
+      order.orderId,
+      savedDeliveryFees[order.orderId] ?? order.deliveryFee ?? order.DeliveryFee ?? ''
+    ]))
     
     // Load product images for each order item
     await loadProductImages()
@@ -735,6 +756,13 @@ function getProductImageUrl(imagePath) {
   return resolveImage(imagePath)
 }
 
+function saveDeliveryFee(orderId, value) {
+  deliveryFees.value[orderId] = value
+  const savedDeliveryFees = JSON.parse(localStorage.getItem(deliveryFeesStorageKey) || '{}')
+  savedDeliveryFees[orderId] = value
+  localStorage.setItem(deliveryFeesStorageKey, JSON.stringify(savedDeliveryFees))
+}
+
 // Handle image loading errors
 function handleImageError(event) {
   console.log('Image failed to load:', event.target.src)
@@ -744,30 +772,96 @@ function handleImageError(event) {
 
 async function downloadInvoice(order) {
   isGeneratingInvoice.value[order.orderId] = true;
-  
+  const deliveryFee = Math.max(0, Number(deliveryFees.value[order.orderId]) || 0);
+  const invoiceTotal = Number(order.totalAmount) + deliveryFee;
+
+  const firstAvailableValue = (...values) => values
+    .map(value => String(value ?? '').trim())
+    .find(value => value && value.toLowerCase() !== 'string');
+  const orderCustomer = order.customer || order.Customer || {};
+  const customerDisplayName = (() => {
+    return firstAvailableValue(order.customerName, order.CustomerName, orderCustomer.name, orderCustomer.Name) || 'Client';
+  })();
+  const orderAddress = order.customerAddress || order.CustomerAddress || order.deliveryAddress || order.DeliveryAddress || order.shippingAddress || order.ShippingAddress || orderCustomer.address || orderCustomer.Address;
+  const orderPhone = order.customerPhone || order.CustomerPhone || order.customerPhoneNumber || order.CustomerPhoneNumber || order.phone || order.Phone || order.phoneNumber || order.PhoneNumber || order.telephone || order.Telephone || order.tel || orderCustomer.phone || orderCustomer.Phone || orderCustomer.phoneNumber || orderCustomer.PhoneNumber;
+
   let customerDetails = {
-    email: 'Non spécifié',
-    address: 'Non spécifiée',
-    phone: 'Non spécifié'
+    name: customerDisplayName,
+    email: firstAvailableValue(order.customerEmail, order.CustomerEmail, order.email, order.Email, orderCustomer.email, orderCustomer.Email) || 'Non spécifié',
+    address: firstAvailableValue(orderAddress, order.address, order.Address) || 'Non spécifiée',
+    phone: firstAvailableValue(orderPhone) || 'Non spécifié',
+    paymentMethod: firstAvailableValue(order.paymentMethod, order.PaymentMethod, order.paymentType, order.PaymentType) || 'Espèce à la livraison'
   };
 
   try {
-    // Fetch detailed user info using the customerName
-    const response = await fetch(api(`/api/Users/info?name=${encodeURIComponent(order.customerName)}`), {
-      method: 'GET',
-      headers: {
-        'accept': '*/*'
-      }
-    });
+    const token = user.value?.token;
+    const customerId = firstAvailableValue(order.customerId, order.CustomerId, order.userId, order.UserId, orderCustomer.userId, orderCustomer.UserId, orderCustomer.id, orderCustomer.Id);
+    if (token && (customerId || customerDisplayName !== 'Client')) {
+      const response = await fetch(api('/api/Users'), {
+        method: 'GET',
+        headers: {
+          'accept': '*/*',
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-    if (response.ok) {
-      const users = await response.json();
-      if (Array.isArray(users) && users.length > 0) {
-        // Find the user that matches the customer name
-        const user = users[0];
-        customerDetails.email = user.email || customerDetails.email;
-        customerDetails.address = user.address || customerDetails.address;
-        customerDetails.phone = user.phone || customerDetails.phone;
+      if (response.ok) {
+        const users = await response.json();
+        const userList = Array.isArray(users) ? users : [];
+        const matchedUser = (customerId && userList.find(candidate =>
+          String(candidate?.userId || candidate?.UserId || candidate?.id || candidate?.Id || '').toLowerCase() === customerId.toLowerCase()
+        )) || userList.find(candidate =>
+          String(candidate?.name || candidate?.Name || candidate?.userName || candidate?.UserName || '').trim().toLowerCase() === customerDisplayName.toLowerCase()
+        );
+
+        if (matchedUser) {
+          const matchedUserId = firstAvailableValue(matchedUser.userId, matchedUser.UserId, matchedUser.id, matchedUser.Id) || customerId;
+          const profileCandidates = [matchedUser];
+          const profileRequests = [];
+
+          if (matchedUserId) {
+            profileRequests.push({
+              kind: 'id',
+              request: fetch(api(`/api/Users/${encodeURIComponent(matchedUserId)}`), {
+                headers: { 'accept': '*/*', 'Authorization': `Bearer ${token}` },
+                cache: 'no-store'
+              })
+            });
+          }
+          if (customerDisplayName !== 'Client') {
+            profileRequests.push({
+              kind: 'name',
+              request: fetch(api(`/api/Users/info?name=${encodeURIComponent(customerDisplayName)}`), {
+                headers: { 'accept': '*/*', 'Authorization': `Bearer ${token}` },
+                cache: 'no-store'
+              })
+            });
+          }
+
+          const profileResponses = await Promise.allSettled(profileRequests.map(async ({ kind, request }) => {
+            const response = await request;
+            if (!response.ok) return null;
+            return { kind, data: await response.json() };
+          }));
+
+          for (const result of profileResponses) {
+            if (result.status !== 'fulfilled' || !result.value?.data) continue;
+            const { kind, data } = result.value;
+            const unwrapped = data.user || data.User || data.profile || data.Profile || data.data || data.Data || data;
+            const candidates = Array.isArray(unwrapped) ? unwrapped : [unwrapped];
+            const matchedProfile = candidates.find(candidate =>
+              String(candidate?.name || candidate?.Name || candidate?.userName || candidate?.UserName || '').trim().toLowerCase() === customerDisplayName.toLowerCase()
+            ) || (kind === 'id' && candidates.length === 1 ? candidates[0] : null);
+            if (matchedProfile && typeof matchedProfile === 'object') profileCandidates.push(matchedProfile);
+          }
+
+          const profileValue = (...keys) => firstAvailableValue(...profileCandidates.flatMap(candidate => keys.map(key => candidate?.[key])));
+
+          customerDetails.name = profileValue('name', 'Name', 'userName', 'UserName') || customerDetails.name;
+          customerDetails.email = profileValue('email', 'Email') || customerDetails.email;
+          customerDetails.address = profileValue('address', 'Address', 'deliveryAddress', 'DeliveryAddress', 'shippingAddress', 'ShippingAddress', 'fullAddress', 'FullAddress', 'adresse', 'Adresse') || customerDetails.address;
+          customerDetails.phone = profileValue('phone', 'Phone', 'phoneNumber', 'PhoneNumber', 'mobile', 'Mobile', 'mobilePhone', 'MobilePhone', 'telephone', 'Telephone', 'tel', 'Tel', 'contactNumber', 'ContactNumber') || customerDetails.phone;
+        }
       }
     }
   } catch (error) {
@@ -816,16 +910,16 @@ async function downloadInvoice(order) {
       <div class="info-grid">
         <div class="info-block">
           <h3>Emetteur</h3>
-          <p><strong>DSushi Restaurant</strong><br>Avenue de l'Indépendance<br>Tunis, Tunisie<br>Contact: +216 71 000 000</p>
+          <p><strong>DSushi Restaurant</strong><br>Djerba Erriadh<br>Tunisie<br>Contact: +216 24 335 305</p>
         </div>
         <div class="info-block">
           <h3>Client</h3>
           <p>
-            <strong>${order.customerName}</strong><br>
+            <strong>${customerDetails.name}</strong><br>
             Email: ${customerDetails.email}<br>
             Adresse: ${customerDetails.address}<br>
             Tél: ${customerDetails.phone}<br>
-            Mode de paiement: Espèce à la livraison
+            Mode de paiement: ${customerDetails.paymentMethod}
           </p>
         </div>
       </div>
@@ -858,11 +952,11 @@ async function downloadInvoice(order) {
         </div>
         <div class="total-row">
           <span>Frais de livraison</span>
-          <span>0.00 DT</span>
+          <span>${deliveryFee.toFixed(2)} DT</span>
         </div>
         <div class="total-row grand-total">
           <span>TOTAL</span>
-          <span>${Number(order.totalAmount).toFixed(2)} DT</span>
+          <span>${invoiceTotal.toFixed(2)} DT</span>
         </div>
       </div>
 

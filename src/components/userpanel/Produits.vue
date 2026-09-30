@@ -95,6 +95,10 @@
                     <div class="card-body">
                       <h3 class="card-name">{{ p.name }}</h3>
                       <p v-if="p.description" class="card-desc">{{ p.description }}</p>
+                      <div class="stock-chip" :class="{ 'stock-chip--empty': getProductStockText(p) === 'Épuisé' }">
+                        <span class="stock-chip-bullet"></span>
+                        {{ getProductStockText(p) }}
+                      </div>
                       <div class="card-footer">
                         <span class="card-price">{{ formatPrice(p.price) }}</span>
                         <button class="details-btn" @click="goToDetails(p)">
@@ -141,6 +145,10 @@
                   <div class="card-body">
                     <h3 class="card-name">{{ p.name }}</h3>
                     <p v-if="p.description" class="card-desc">{{ p.description }}</p>
+                    <div class="stock-chip" :class="{ 'stock-chip--empty': getProductStockText(p) === 'Épuisé' }">
+                      <span class="stock-chip-bullet"></span>
+                      {{ getProductStockText(p) }}
+                    </div>
                     <div class="card-footer">
                       <span class="card-price">{{ formatPrice(p.price) }}</span>
                       <button class="details-btn" @click="goToDetails(p)">
@@ -186,6 +194,9 @@
           <h3 class="modal-title">{{ detailsProduct.name }}</h3>
           <p class="modal-desc">{{ detailsProduct.description }}</p>
           <span class="modal-price">{{ formatPrice(detailsProduct.price) }}</span>
+          <div class="modal-stock" :class="{ 'modal-stock--empty': getProductStockText(detailsProduct) === 'Épuisé' }">
+            <span class="modal-stock-value">{{ getProductStockText(detailsProduct) }}</span>
+          </div>
           <div class="modal-actions">
             <button
               @click="addToCart(detailsProduct)"
@@ -237,6 +248,12 @@ const formatPrice = (num) => {
   const value = Number(num)
   if (Number.isNaN(value)) return '—'
   try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2 }).format(value) } catch { return `${value.toFixed(2)} ${CURRENCY}` }
+}
+
+function getProductStockText(product) {
+  const stock = Number(product?.stock ?? product?.Stock ?? 0)
+  if (!Number.isFinite(stock) || stock <= 0) return 'Épuisé'
+  return `${stock} pièce${stock > 1 ? 's' : ''}`
 }
 
 const products = ref([])
@@ -770,6 +787,33 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
   min-height: 2.4rem;
 }
 
+.stock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #166534;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.stock-chip--empty {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.stock-chip-bullet {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
 .card-footer {
   display: flex;
   align-items: center;
@@ -954,6 +998,29 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
   letter-spacing: -0.03em;
   display: block;
   margin-bottom: 24px;
+}
+
+.modal-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.modal-stock--empty {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.modal-stock-label {
+  opacity: 0.8;
 }
 
 .modal-actions {
@@ -1232,5 +1299,12 @@ onUnmounted(() => { window.removeEventListener('scroll', onScroll) })
 
 .slider-nav--next {
   margin-left: 8px;
+}
+
+@media (max-width: 640px) {
+  .categories-bar {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
 }
 </style>

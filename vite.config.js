@@ -11,7 +11,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:5198',
+        target: process.env.VITE_API_PROXY_TARGET || 'https://dsushi-be.onrender.com',
         changeOrigin: true,
         secure: false,
         timeout: 180000,
