@@ -11,7 +11,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://dsushi.runasp.net',
+        target: process.env.VITE_API_PROXY_TARGET || 'https://dsushi-be.onrender.com',
         changeOrigin: true,
         secure: false,
         timeout: 180000,
@@ -29,14 +29,14 @@ export default defineConfig({
         }
       },
       '/images': {
-        target: 'http://dsushi.runasp.net',
+        target: 'https://dsushi-be.onrender.com',
         changeOrigin: true,
         secure: false,
         timeout: 10000,
         proxyTimeout: 10000
       },
       '/Images': {
-        target: 'http://dsushi.runasp.net',
+        target: 'https://dsushi-be.onrender.com',
         changeOrigin: true,
         secure: false,
         timeout: 10000,

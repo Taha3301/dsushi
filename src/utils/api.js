@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 
-const PROD_URL = "http://dsushi.runasp.net";
+const PROD_URL = (import.meta.env.VITE_API_BASE_URL || "https://dsushi-be.onrender.com").replace(/\/$/, "")
 // Use runtime check to be robust against build configuration issues
 const isLocal = !Capacitor.isNativePlatform() && typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || 
