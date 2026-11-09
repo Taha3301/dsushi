@@ -83,6 +83,25 @@
           <h2 class="text-lg font-semibold text-gray-900">Produits</h2>
           <button @click="loadProducts" class="text-sm text-gray-700 hover:text-gray-900 underline">Rafraîchir</button>
         </div>
+        <div class="grid grid-cols-1 gap-3 mb-4 sm:grid-cols-2">
+          <input
+            v-model="productSearch"
+            type="search"
+            placeholder="Rechercher un produit..."
+            aria-label="Rechercher un produit"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          />
+          <select
+            v-model="selectedCategoryId"
+            aria-label="Filtrer par catégorie"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          >
+            <option value="">Toutes les catégories</option>
+            <option v-for="category in categories" :key="category.categoryId" :value="String(category.categoryId)">
+              {{ category.name }}
+            </option>
+          </select>
+        </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-left text-sm">
             <thead class="bg-gray-50 text-gray-700">
@@ -97,7 +116,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="p in products" :key="p.productId" class="border-t">
+              <tr v-for="p in filteredProducts" :key="p.productId" class="border-t">
                 <td class="px-3 py-2 font-medium text-gray-900">{{ p.name }}</td>
                 <td class="px-3 py-2">{{ formatPrice(p.price) }}</td>
                 <td class="px-3 py-2">{{ p.stock }}</td>
@@ -131,6 +150,9 @@
                     <button @click="confirmDelete(p)" class="inline-flex items-center gap-1 rounded-lg bg-red-600 text-white px-3 h-9 text-xs font-semibold shadow-sm hover:bg-red-700">Supprimer</button>
                   </div>
                 </td>
+              </tr>
+              <tr v-if="filteredProducts.length === 0">
+                <td colspan="7" class="px-3 py-8 text-center text-gray-500">Aucun produit ne correspond à votre recherche.</td>
               </tr>
             </tbody>
           </table>
@@ -180,7 +202,7 @@
   </template>
   
   <script setup>
-import { ref, reactive, onMounted } from 'vue'
+  import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuth } from '../../stores/auth.js'
 import { api, resolveImage } from '../../utils/api.js'
 
@@ -197,6 +219,17 @@ const formatPrice = (num) => {
 
 const products = ref([])
 const categories = ref([])
+const productSearch = ref('')
+const selectedCategoryId = ref('')
+const filteredProducts = computed(() => {
+  const normalizedSearch = productSearch.value.trim().toLocaleLowerCase()
+  return products.value.filter(product => {
+    const matchesCategory = !selectedCategoryId.value
+      || String(product.categoryId) === selectedCategoryId.value
+    const searchableText = `${product.name || ''} ${product.category?.name || ''}`.toLocaleLowerCase()
+    return matchesCategory && (!normalizedSearch || searchableText.includes(normalizedSearch))
+  })
+})
 const isSubmitting = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)

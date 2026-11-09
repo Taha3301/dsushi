@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import './style.css'
 import App from './App.vue'
 import './assets/main.css'
-import { useAuth } from './stores/auth.js'
+import { useAuth, bindAuthRouter, installAuthFetchGuard, installSessionVisibilityWatch, isSessionExpired, expireSession } from './stores/auth.js'
 
 // Import components
 import LandingPage from './components/landingpage.vue'
@@ -62,11 +62,23 @@ const router = createRouter({
   routes
 })
 
-// Navigation Guard
+const { initializeAuth } = useAuth()
+initializeAuth()
+bindAuthRouter(router)
+installAuthFetchGuard()
+installSessionVisibilityWatch()
+
 router.beforeEach((to, from, next) => {
   const { isAdmin, isAuthenticated } = useAuth()
 
-  // Handle Admin routes
+  if (isAuthenticated.value && isSessionExpired()) {
+    expireSession(false)
+    if (to.path !== '/login') {
+      next({ path: '/login', query: { session: 'expired' } })
+      return
+    }
+  }
+
   if (to.meta.requiresAdmin) {
     if (!isAuthenticated.value) {
       next('/login')
@@ -75,27 +87,23 @@ router.beforeEach((to, from, next) => {
     } else {
       next()
     }
-  }
-  // Handle Authenticated-only routes
-  else if (to.meta.requiresAuth) {
+  } else if (to.meta.requiresAuth) {
     if (!isAuthenticated.value) {
       next('/login')
     } else {
       next()
     }
-  }
-  else {
-    // Public route
+  } else {
     next()
   }
 })
 
-// Create and mount the app
 const app = createApp(App)
 app.use(router)
-
-// Initialize authentication
-const { initializeAuth } = useAuth()
-initializeAuth()
-
 app.mount('#app')
+
+router.isReady().then(() => {
+  if (sessionStorage.getItem('sessionExpired') === '1' && router.currentRoute.value.path !== '/login') {
+    router.replace({ path: '/login', query: { session: 'expired' } })
+  }
+})

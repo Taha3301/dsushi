@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 
-const PROD_URL = "https://dsushi-be.onrender.com";
+const PROD_URL = "http://dsushi.runasp.net";
 // Use runtime check to be robust against build configuration issues
 const isLocal = !Capacitor.isNativePlatform() && typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || 

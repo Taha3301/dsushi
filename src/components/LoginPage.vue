@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuth } from '../stores/auth.js'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuth, consumeSessionExpiredFlag } from '../stores/auth.js'
 import { api } from '../utils/api.js'
 
 const router = useRouter()
+const route = useRoute()
 const { login } = useAuth()
 const close = () => {} // Dummy function to match the navbar's close function
 const email = ref('')
@@ -14,8 +15,6 @@ const isLoading = ref(false)
 const showPassword = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-
-import { onMounted } from 'vue'
 
 onMounted(() => {
   const savedEmail = localStorage.getItem('savedEmail')
@@ -28,6 +27,9 @@ onMounted(() => {
     password.value = savedPassword
   }
 
+  if (route.query.session === 'expired' || consumeSessionExpiredFlag()) {
+    errorMessage.value = 'Votre session a expiré. Veuillez vous reconnecter.'
+  }
 })
 
 const handleLogin = async () => {
@@ -80,14 +82,18 @@ const handleLogin = async () => {
         }
       }, 1500)
     } else {
-      let errorText = 'Erreur lors de la connexion'
-      try {
-        const errorData = await response.json()
-        errorText = errorData.message || errorText
-      } catch (jsonError) {
-        errorText = response.statusText || errorText
+      if (response.status === 500) {
+        errorMessage.value = 'Nous serons bientôt de retour. Réessayez dans quelques instants.'
+      } else {
+        let errorText = 'Erreur lors de la connexion'
+        try {
+          const errorData = await response.json()
+          errorText = errorData.message || errorText
+        } catch (jsonError) {
+          errorText = response.statusText || errorText
+        }
+        errorMessage.value = errorText
       }
-      errorMessage.value = errorText
     }
   } catch (error) {
     errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
@@ -132,7 +138,14 @@ const navigateToSignup = () => {
       <!-- Login Form -->
       <div class="bg-white py-8 px-6 shadow-2xl rounded-3xl border border-gray-100">
         <!-- Error/Success Messages -->
-        <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <div
+          v-if="errorMessage"
+          role="alert"
+          class="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3.5 text-sm leading-6 text-amber-950 shadow-sm"
+        >
+          <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M9.401 1.598a1.75 1.75 0 0 1 3.198 0l6.12 13.158A1.75 1.75 0 0 1 17.12 17.25H2.88a1.75 1.75 0 0 1-1.599-2.494L7.4 1.598a1.75 1.75 0 0 1 2.001 0ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+          </svg>
           {{ errorMessage }}
         </div>
         <div v-if="successMessage" class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">

@@ -1,12 +1,16 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuth } from '../stores/auth.js'
 import { api } from '../utils/api.js'
 
 const router = useRouter()
+const { login } = useAuth()
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const verificationCode = ref('')
+const step = ref('registration')
 const isLoading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -37,31 +41,20 @@ const handleSignUp = async () => {
   isLoading.value = true
   
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    let response
-    try {
-      response = await fetch(api('/api/Auth/register/customer'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.value,
-          password: password.value
-        }),
-        signal: controller.signal
+    const response = await fetch(api('/api/Auth/register/customer'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
       })
-    } finally {
-      clearTimeout(timeoutId)
-    }
+    })
 
     if (response.ok) {
-      successMessage.value = 'Compte créé avec succès ! Redirection vers la page de connexion...'
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
+      step.value = 'verification'
+      successMessage.value = 'Un code de vérification a été envoyé à votre adresse email.'
     } else {
       let errorText = 'Erreur lors de l\'inscription'
       const responseText = await response.text()
@@ -74,18 +67,96 @@ const handleSignUp = async () => {
       errorMessage.value = errorText
     }
   } catch (error) {
-    if (error.name === 'AbortError') {
-      successMessage.value = 'La création a peut-être réussi. Essayez de vous connecter avec vos identifiants.'
-      setTimeout(() => router.push('/login'), 1500)
-    } else {
-      errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
-    }
+    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
     console.error('Registration error:', error)
   } finally {
     isLoading.value = false
   }
 }
 
+const handleVerifyEmail = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+  isLoading.value = true
+
+  try {
+    const verificationResponse = await fetch(api('/api/Auth/verify-email'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.value,
+        code: verificationCode.value
+      })
+    })
+
+    if (!verificationResponse.ok) {
+      let errorText = 'Erreur lors de la vérification de votre adresse email.'
+      const responseText = await verificationResponse.text()
+      try {
+        const errorData = responseText ? JSON.parse(responseText) : {}
+        errorText = errorData.message || errorData.error || errorText
+      } catch {
+        errorText = responseText || verificationResponse.statusText || errorText
+      }
+      errorMessage.value = errorText
+      return
+    }
+
+    const loginResponse = await fetch(api('/api/Auth/login'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    })
+
+    if (!loginResponse.ok) {
+      let errorText = 'Votre email est vérifié, mais la connexion automatique a échoué. Connectez-vous avec vos identifiants.'
+      const responseText = await loginResponse.text()
+      try {
+        const errorData = responseText ? JSON.parse(responseText) : {}
+        errorText = errorData.message || errorText
+      } catch {
+        errorText = responseText || errorText
+      }
+      errorMessage.value = errorText
+      return
+    }
+
+    const userData = await loginResponse.json()
+    login({
+      email: email.value,
+      name: userData.name || userData.userName || email.value.split('@')[0],
+      role: userData.role,
+      token: userData.token,
+      expires: userData.expires,
+      ...userData
+    })
+
+    if (userData.role === 'Admin') {
+      await router.push('/crud')
+    } else {
+      await router.push('/')
+    }
+  } catch (error) {
+    errorMessage.value = 'Erreur de connexion. Veuillez réessayer.'
+    console.error('Email verification error:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const returnToRegistration = () => {
+  step.value = 'registration'
+  verificationCode.value = ''
+  errorMessage.value = ''
+  successMessage.value = ''
+}
 
 const togglePasswordVisibility = (field) => {
   if (field === 'password') showPassword.value = !showPassword.value
@@ -100,7 +171,7 @@ const navigateToLogin = () => {
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
+    class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center py-8 px-3 sm:py-12 sm:px-6 lg:px-8 relative"
   >
     <!-- Background Decorations -->
     <div class="absolute inset-0 overflow-hidden">
@@ -115,29 +186,31 @@ const navigateToLogin = () => {
       ></div>
     </div>
 
-    <div class="max-w-md w-full space-y-8 relative z-10">
+    <div class="w-full max-w-md space-y-6 sm:space-y-8 relative z-10">
       <!-- Header -->
       <div class="text-center">
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">
-          Créez votre
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          {{ step === 'registration' ? 'Créez votre' : 'Vérifiez votre' }}
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800">
-            compte DSushi
+            {{ step === 'registration' ? 'compte DSushi' : 'adresse email' }}
           </span>
         </h2>
-        <p class="text-gray-600">Rejoignez-nous dès maintenant !</p>
+        <p class="text-sm sm:text-base text-gray-600">
+          {{ step === 'registration' ? 'Rejoignez-nous dès maintenant !' : 'Saisissez le code envoyé à votre adresse email.' }}
+        </p>
       </div>
 
       <!-- Form -->
-      <div class="bg-white py-8 px-6 shadow-2xl rounded-3xl border border-gray-100">
+      <div class="bg-white py-6 px-4 sm:py-8 sm:px-6 shadow-2xl rounded-3xl border border-gray-100">
         <!-- Error/Success Messages -->
-        <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <div v-if="errorMessage" class="mb-4 p-3 break-words bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {{ errorMessage }}
         </div>
-        <div v-if="successMessage" class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+        <div v-if="successMessage" class="mb-4 p-3 break-words bg-green-100 border border-green-400 text-green-700 rounded-lg">
           {{ successMessage }}
         </div>
         
-        <form @submit.prevent="handleSignUp" class="space-y-6">
+        <form v-if="step === 'registration'" @submit.prevent="handleSignUp" class="space-y-6">
           <!-- Email -->
           <div>
             <label
@@ -379,6 +452,57 @@ const navigateToLogin = () => {
     >
       Retour à l’accueil
     </router-link>
+        </form>
+
+        <form v-else @submit.prevent="handleVerifyEmail" class="space-y-5 sm:space-y-6">
+          <div>
+            <label for="verificationEmail" class="block text-sm font-medium text-gray-700 mb-2">
+              Adresse email
+            </label>
+            <input
+              id="verificationEmail"
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+              placeholder="votre@email.com"
+            />
+          </div>
+
+          <div>
+            <label for="verificationCode" class="block text-sm font-medium text-gray-700 mb-2">
+              Code de vérification
+            </label>
+            <input
+              id="verificationCode"
+              v-model="verificationCode"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              required
+              class="block w-full min-w-0 px-3 sm:px-4 py-3 text-center text-base sm:text-lg tracking-wider border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+              placeholder="Saisissez le code reçu"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="isLoading"
+            class="group relative w-full flex justify-center py-3 px-3 sm:px-4 text-sm sm:text-base font-medium text-center border border-transparent rounded-xl text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+          >
+            {{ isLoading ? 'Vérification en cours...' : 'Vérifier et se connecter' }}
+          </button>
+
+          <div class="text-center">
+            <button
+              type="button"
+              @click="returnToRegistration"
+              class="text-sm font-medium text-red-600 hover:text-red-500 transition-colors duration-200"
+            >
+              Retour à l’inscription
+            </button>
+          </div>
         </form>
       </div>
     </div>

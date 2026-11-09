@@ -20,7 +20,7 @@
             <div v-if="isUserLoading" class="py-8 text-center text-gray-500">Chargement des informations...</div>
             <div v-else-if="userInfo" class="space-y-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div class="min-w-0">
+                  <div class="min-w-0">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nom</label>
                   <div class="min-h-12 break-words [overflow-wrap:anywhere] px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 rounded-lg sm:rounded-xl text-gray-900 text-sm sm:text-base">{{ userInfo.name || '—' }}</div>
                 </div>
@@ -74,18 +74,51 @@
               <p class="min-w-0 text-xs text-gray-600 sm:text-sm">
                 Vérifiez que votre adresse de livraison et votre téléphone sont exacts.
               </p>
-              <router-link
-                v-if="isAuthenticated"
-                ref="modifyProfileButton"
-                to="/settings"
+              <button
+                v-if="isAuthenticated && !isEditingUserInfo"
+                type="button"
+                @click="editUserInfo"
                 class="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-900 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:scale-[0.98] sm:min-h-10 sm:self-auto"
               >
-                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13l-3.3.943.943-3.3a4.5 4.5 0 0 1 1.13-1.897l9.404-9.405ZM19.5 7.125 16.875 4.5M19.5 12.75v6.375A1.875 1.875 0 0 1 17.625 21h-11.25A1.875 1.875 0 0 1 4.5 19.125V7.875A1.875 1.875 0 0 1 6.375 6h6.375" />
                 </svg>
-                Modifier
-              </router-link>
+                Modifier mes informations
+              </button>
             </div>
+            <form
+              v-if="isEditingUserInfo"
+              ref="profileEditor"
+              @submit.prevent="saveUserInfo"
+              class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
+            >
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label for="checkout-name" class="mb-1 block text-sm font-medium text-gray-700">Nom complet</label>
+                  <input id="checkout-name" v-model="userInfoForm.name" type="text" autocomplete="name" required class="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+                </div>
+                <div>
+                  <label for="checkout-email" class="mb-1 block text-sm font-medium text-gray-700">Adresse email</label>
+                  <input id="checkout-email" v-model="userInfoForm.email" type="email" autocomplete="email" required class="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+                </div>
+                <div class="md:col-span-2">
+                  <label for="checkout-address" class="mb-1 block text-sm font-medium text-gray-700">Adresse exacte</label>
+                  <textarea id="checkout-address" v-model="userInfoForm.address" autocomplete="street-address" rows="2" required class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20" placeholder="Numéro, rue, quartier et ville"></textarea>
+                </div>
+                <div>
+                  <label for="checkout-phone" class="mb-1 block text-sm font-medium text-gray-700">Téléphone</label>
+                  <input id="checkout-phone" v-model="userInfoForm.phone" type="tel" autocomplete="tel" required class="min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+                </div>
+              </div>
+              <p v-if="userInfoError" role="alert" class="text-sm text-red-700">{{ userInfoError }}</p>
+              <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" @click="cancelUserInfoEdit" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-100">Annuler</button>
+                <button type="submit" :disabled="isSavingUserInfo" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-wait disabled:opacity-60">
+                  {{ isSavingUserInfo ? 'Enregistrement...' : 'Enregistrer mes informations' }}
+                </button>
+              </div>
+            </form>
+            <p v-if="userInfoSuccess" role="status" class="mt-3 text-sm text-green-700">{{ userInfoSuccess }}</p>
           </div>
         </div>
 
@@ -189,6 +222,34 @@
           </div>
         </div>
 
+        <div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl sm:shadow-xl">
+          <div class="border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+            <h2 class="text-base font-semibold text-gray-900 sm:text-lg">Choisir un jour et une heure</h2>
+            <p class="mt-1 text-sm text-gray-600">Sélectionnez l’un des créneaux proposés par l’administration.</p>
+          </div>
+          <div class="px-4 py-4 sm:px-6">
+            <p v-if="isOrderTimeSlotsLoading" class="text-sm text-gray-500">Chargement des créneaux...</p>
+            <p v-else-if="orderTimeSlotsError" class="text-sm text-red-700" role="alert">{{ orderTimeSlotsError }}</p>
+            <p v-else-if="!orderTimeSlots.length" class="text-sm text-amber-800">
+              Aucun créneau n’est disponible pour le moment. Restez à l’affût, de nouvelles dates seront bientôt proposées !
+            </p>
+            <div v-else>
+              <label for="checkout-order-time-slot" class="mb-1 block text-sm font-medium text-gray-700">Date et heure de la commande</label>
+              <select
+                id="checkout-order-time-slot"
+                v-model="selectedOrderTimeSlotId"
+                required
+                class="min-h-12 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              >
+                <option disabled value="">Choisir un créneau</option>
+                <option v-for="slot in orderTimeSlots" :key="slot.slotId" :value="slot.slotId">
+                  {{ formatOrderTimeSlot(slot.date, slot.time) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div v-if="cartItems.length > 0" class="flex flex-col sm:flex-row gap-3">
           <router-link to="/produits" class="flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-900 shadow-sm transition-all hover:border-gray-400 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:scale-[0.98]">
@@ -196,10 +257,10 @@
           </router-link>
           <button 
             @click="confirmOrder" 
-            :disabled="isOrderProcessing || !canOrder || !isUserInfoValid"
+            :disabled="isOrderProcessing || !isUserInfoValid || !selectedOrderTimeSlotId || isOrderTimeSlotsLoading"
             :class="[
               'flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:scale-[0.98]',
-              (!canOrder || !isUserInfoValid || isOrderProcessing)
+              (!isUserInfoValid || isOrderProcessing || !selectedOrderTimeSlotId || isOrderTimeSlotsLoading)
                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 : 'bg-red-600 text-white hover:bg-red-700'
             ]"
@@ -208,13 +269,7 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
-            <span>
-              {{ 
-                isOrderProcessing ? 'Traitement...' : 
-                (!canOrder ? 'Commandes indisponibles' : 
-                'Finaliser la commande')
-              }}
-            </span>
+            <span>{{ isOrderProcessing ? 'Traitement...' : 'Finaliser la commande' }}</span>
           </button>
         </div>
 
@@ -233,7 +288,7 @@
               {{ isUserInfoValid ? 'Confirmer votre commande' : 'Informations à compléter' }}
             </h2>
             <p class="mt-1 text-sm text-gray-600">
-              {{ isUserInfoValid ? 'Vérifiez les informations de livraison avant de confirmer.' : 'Complétez vos informations dans les paramètres avant de passer commande.' }}
+              {{ isUserInfoValid ? 'Vérifiez les informations de livraison avant de confirmer.' : 'Complétez vos informations dans la section Informations personnelles.' }}
             </p>
 
             <div v-if="!isUserInfoValid" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -262,10 +317,18 @@
                 </dd>
               </div>
               <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
+                <dt class="font-medium text-gray-500">Jour et heure</dt>
+                <dd class="break-words text-gray-900">{{ selectedOrderTimeSlot ? formatOrderTimeSlot(selectedOrderTimeSlot.date, selectedOrderTimeSlot.time) : 'À choisir' }}</dd>
+              </div>
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 py-3 text-sm">
                 <dt class="font-medium text-gray-500">Paiement</dt>
                 <dd class="break-words text-gray-900">Espèce à la livraison</dd>
               </div>
             </dl>
+
+            <p v-if="orderConfirmationError" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">
+              {{ orderConfirmationError }}
+            </p>
 
             <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
@@ -278,7 +341,7 @@
               <button
                 type="button"
                 @click="placeOrder"
-                :disabled="isOrderProcessing || !isUserInfoValid || !canOrder"
+                :disabled="isOrderProcessing || !isUserInfoValid || !selectedOrderTimeSlotId"
                 class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg v-if="isOrderProcessing" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -313,7 +376,7 @@
   </template>
   
   <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../../stores/auth.js'
 import { api, resolveImage } from '../../utils/api.js'
@@ -325,16 +388,49 @@ const isCartLoading = ref(false)
 const cartItems = ref([])
 const cartMutationQueues = new Map()
 const personalInfoSection = ref(null)
-const modifyProfileButton = ref(null)
+const profileEditor = ref(null)
 const isUserLoading = ref(false)
 const userInfo = ref(null)
+const isEditingUserInfo = ref(false)
+const isSavingUserInfo = ref(false)
+const userInfoForm = ref({ name: '', email: '', address: '', phone: '' })
+const userInfoError = ref('')
+const userInfoSuccess = ref('')
 const paymentMethod = ref('espece')
 const comments = ref('')
 const showOrderConfirmationModal = ref(false)
 const isOrderProcessing = ref(false)
 const showNotification = ref(false)
 const notificationTotal = ref('')
-const canOrder = ref(true)
+const orderConfirmationError = ref('')
+const orderTimeSlots = ref([])
+const selectedOrderTimeSlotId = ref('')
+const isOrderTimeSlotsLoading = ref(false)
+const orderTimeSlotsError = ref('')
+
+const selectedOrderTimeSlot = computed(() => orderTimeSlots.value.find(
+  slot => String(slot.slotId) === String(selectedOrderTimeSlotId.value)
+))
+
+function formatOrderTimeSlot(day, time) {
+  const date = new Date(`${day}T${time}`)
+  if (!day || !time || !Number.isFinite(date.getTime())) return 'Date de créneau invalide'
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
+function getOrderTimeSlotDate(slot) {
+  if (!slot?.date || !slot?.time) return null
+  const date = new Date(`${slot.date}T${slot.time}`)
+  return Number.isFinite(date.getTime()) ? date : null
+}
 
 
 
@@ -408,40 +504,23 @@ function isPlaceholderValue(value) {
   return !normalizedValue || normalizedValue === 'temp' || normalizedValue === 'string'
 }
 
-const isUserInfoValid = computed(() => {
-  if (!userInfo.value) return false
+const requiredUserInfoFields = [
+  ['name', 'nom'],
+  ['email', 'adresse email'],
+  ['address', 'adresse exacte'],
+  ['phone', 'téléphone']
+]
 
-  const email = String(userInfo.value.email ?? '').trim()
-  const phone = String(userInfo.value.phone ?? '').trim()
-
-  const hasValidEmail = email.length > 0 && !isPlaceholderValue(email)
-  const hasValidPhone = phone.length > 0 && !isPlaceholderValue(phone)
-
-  return hasValidEmail && hasValidPhone
-})
+const isUserInfoValid = computed(() => Boolean(userInfo.value) && requiredUserInfoFields.every(([field]) =>
+  !isPlaceholderValue(userInfo.value[field])
+))
 
 const userInfoValidationMessage = computed(() => {
   if (!userInfo.value) return 'Impossible de charger les informations utilisateur.'
-
-  const email = String(userInfo.value.email ?? '').trim()
-  const phone = String(userInfo.value.phone ?? '').trim()
-  const missing = []
-
-  if (!email || isPlaceholderValue(email)) {
-    missing.push('Email')
-  }
-
-  if (!phone || isPlaceholderValue(phone)) {
-    missing.push('Téléphone')
-  }
-
-  if (missing.length === 0) return ''
-
-  if (missing.length === 1) {
-    return `Veuillez compléter votre ${missing[0].toLowerCase()}.`
-  }
-
-  return `Veuillez compléter votre ${missing[0].toLowerCase()} et votre ${missing[1].toLowerCase()}.`
+  const missing = requiredUserInfoFields
+    .filter(([field]) => isPlaceholderValue(userInfo.value[field]))
+    .map(([, label]) => label)
+  return missing.length ? `Veuillez compléter : ${missing.join(', ')}.` : ''
 })
 
 
@@ -600,40 +679,133 @@ async function loadUserInfo() {
   }
 }
 
-async function fetchCanOrder() {
+async function editUserInfo() {
+  if (!userInfo.value) await loadUserInfo()
+  if (!userInfo.value) return
+
+  userInfoForm.value = {
+    name: userInfo.value.name || '',
+    email: userInfo.value.email || '',
+    address: userInfo.value.address || '',
+    phone: userInfo.value.phone || ''
+  }
+  userInfoError.value = ''
+  userInfoSuccess.value = ''
+  isEditingUserInfo.value = true
+  await nextTick()
+  profileEditor.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function cancelUserInfoEdit() {
+  isEditingUserInfo.value = false
+  userInfoError.value = ''
+  userInfoSuccess.value = ''
+}
+
+async function saveUserInfo() {
+  userInfoError.value = ''
+  userInfoSuccess.value = ''
+
+  const missingFields = requiredUserInfoFields
+    .filter(([field]) => isPlaceholderValue(userInfoForm.value[field]))
+    .map(([, label]) => label)
+  if (missingFields.length) {
+    userInfoError.value = `Veuillez compléter : ${missingFields.join(', ')}.`
+    return
+  }
+
+  isSavingUserInfo.value = true
   try {
-    const res = await fetch(api('/api/CanOrder'), { 
-      headers: { 'accept': 'application/json' } 
+    const response = await fetch(api('/api/Auth/update-profile'), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.value?.token}`
+      },
+      body: JSON.stringify(userInfoForm.value)
     })
-    if (!res.ok) throw new Error('CanOrder fetch failed')
-    const data = await res.json()
-    canOrder.value = data?.isEnabled !== false
-  } catch (e) {
-    console.error('Error fetching CanOrder:', e)
+
+    if (!response.ok) {
+      let errorMessage = 'Erreur lors de la mise à jour du profil.'
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorMessage
+      } catch {
+        errorMessage = response.statusText || errorMessage
+      }
+      throw new Error(errorMessage)
+    }
+
+    const profileResponse = await fetch(api('/api/Users/me'), {
+      headers: {
+        'accept': 'application/json',
+        'Authorization': `Bearer ${user.value?.token}`
+      },
+      cache: 'no-store'
+    })
+    if (!profileResponse.ok) throw new Error('Profil envoyé, mais impossible de vérifier les informations enregistrées.')
+
+    userInfo.value = await profileResponse.json()
+    if (!isUserInfoValid.value) {
+      userInfoError.value = 'Certaines informations sont toujours manquantes dans le profil enregistré.'
+      return
+    }
+
+    isEditingUserInfo.value = false
+    userInfoSuccess.value = 'Vos informations ont été enregistrées.'
+  } catch (error) {
+    userInfoError.value = error.message || 'Erreur de connexion. Veuillez réessayer.'
+    console.error('Checkout profile update error:', error)
+  } finally {
+    isSavingUserInfo.value = false
   }
 }
 
-function scrollToModifyButton() {
-  window.setTimeout(() => {
-    const target = modifyProfileButton.value?.$el || modifyProfileButton.value || personalInfoSection.value
-    if (!target) return
+async function fetchAvailableOrderTimeSlots() {
+  isOrderTimeSlotsLoading.value = true
+  orderTimeSlotsError.value = ''
+  try {
+    const response = await fetch(api('/api/CanOrder/slots'), {
+      headers: { 'accept': 'application/json' },
+      cache: 'no-store'
+    })
+    if (!response.ok) throw new Error('Order time slots fetch failed')
+    const slots = await response.json()
+    if (!Array.isArray(slots)) throw new Error('Invalid order time slots response')
+    orderTimeSlots.value = slots.map(slot => {
+      const timestamp = slot?.scheduledAt ?? slot?.ScheduledAt
+      const timestampDate = timestamp ? new Date(timestamp) : null
+      const date = slot?.date ?? slot?.Date ?? (timestampDate && Number.isFinite(timestampDate.getTime())
+        ? `${timestampDate.getFullYear()}-${String(timestampDate.getMonth() + 1).padStart(2, '0')}-${String(timestampDate.getDate()).padStart(2, '0')}`
+        : '')
+      const time = slot?.time ?? slot?.Time ?? (timestampDate && Number.isFinite(timestampDate.getTime())
+        ? `${String(timestampDate.getHours()).padStart(2, '0')}:${String(timestampDate.getMinutes()).padStart(2, '0')}:00`
+        : '')
 
-    const bodyCanScroll = document.body.scrollHeight > document.body.clientHeight
-    const scrollContainer = bodyCanScroll
-      ? document.body
-      : document.scrollingElement || document.documentElement
-    const targetTop = target.getBoundingClientRect().top + scrollContainer.scrollTop
-    const visibleOffset = Math.max(100, window.innerHeight * 0.25)
-    scrollContainer.scrollTop = Math.max(0, targetTop - visibleOffset)
-  }, 100)
+      return {
+        slotId: slot?.slotId ?? slot?.orderTimeSlotId ?? slot?.OrderTimeSlotId,
+        date,
+        time
+      }
+    }).filter(slot =>
+      slot.slotId &&
+      getOrderTimeSlotDate(slot)?.getTime() > Date.now()
+    )
+    if (!orderTimeSlots.value.some(slot => String(slot.slotId) === String(selectedOrderTimeSlotId.value))) {
+      selectedOrderTimeSlotId.value = ''
+    }
+  } catch (error) {
+    orderTimeSlots.value = []
+    selectedOrderTimeSlotId.value = ''
+    orderTimeSlotsError.value = 'Impossible de charger les créneaux. Veuillez réessayer.'
+    console.error('Error fetching order time slots:', error)
+  } finally {
+    isOrderTimeSlotsLoading.value = false
+  }
 }
 
 // Confirm order
 async function confirmOrder() {
-  if (!canOrder.value) {
-    alert('Désolé, les commandes sont temporairement désactivées. Veuillez réessayer plus tard.')
-    return
-  }
   const token = user.value?.token
   const customerId = getCustomerIdFromToken(token)
   
@@ -654,16 +826,35 @@ async function confirmOrder() {
     return
   }
 
+  if (!selectedOrderTimeSlot.value || getOrderTimeSlotDate(selectedOrderTimeSlot.value)?.getTime() <= Date.now()) {
+    selectedOrderTimeSlotId.value = ''
+    await fetchAvailableOrderTimeSlots()
+    alert('Le créneau choisi est déjà passé. Veuillez choisir un jour et une heure futurs.')
+    return
+  }
+
   showOrderConfirmationModal.value = true
 }
 
-function modifyOrderInfo() {
+async function modifyOrderInfo() {
   showOrderConfirmationModal.value = false
-  scrollToModifyButton()
+  await editUserInfo()
 }
 
 async function placeOrder() {
-  showOrderConfirmationModal.value = false
+  if (!selectedOrderTimeSlot.value) {
+    alert('Veuillez choisir un jour et une heure pour votre commande.')
+    return
+  }
+
+  if (getOrderTimeSlotDate(selectedOrderTimeSlot.value)?.getTime() <= Date.now()) {
+    selectedOrderTimeSlotId.value = ''
+    await fetchAvailableOrderTimeSlots()
+    orderTimeSlotsError.value = 'Le créneau choisi est déjà passé. Sélectionnez un autre jour et une autre heure.'
+    showOrderConfirmationModal.value = false
+    return
+  }
+
   const token = user.value?.token
   const customerId = getCustomerIdFromToken(token)
   if (!token || !customerId) {
@@ -672,6 +863,7 @@ async function placeOrder() {
   }
 
   isOrderProcessing.value = true
+  orderConfirmationError.value = ''
 
   try {
     const response = await fetch(api(`/api/order/confirm/${customerId}`), {
@@ -680,13 +872,38 @@ async function placeOrder() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify(comments.value || '')
+      body: JSON.stringify({
+        orderTimeSlotId: selectedOrderTimeSlot.value.slotId,
+        comments: comments.value || ''
+      })
     })
 
     if (!response.ok) {
-      throw new Error('Erreur lors de la confirmation de la commande')
+      const responseBody = await response.text()
+      let details = responseBody
+      try {
+        const parsedBody = JSON.parse(responseBody)
+        const validationErrors = parsedBody.errors ? Object.values(parsedBody.errors).flat().join(' ') : ''
+        details = parsedBody.detail || parsedBody.message || validationErrors || parsedBody.title || responseBody
+      } catch {
+        // The backend may return a plain-text error instead of JSON.
+      }
+      if (response.status === 400 && /slot must be in the future|slot.*no longer available/i.test(details)) {
+        selectedOrderTimeSlotId.value = ''
+        await fetchAvailableOrderTimeSlots()
+        orderTimeSlotsError.value = 'Ce créneau est déjà passé ou n’est plus disponible. Choisissez un autre créneau.'
+        showOrderConfirmationModal.value = false
+        return
+      }
+      if (response.status === 404) {
+        throw new Error('Le serveur ne trouve pas la route de confirmation de commande.')
+      }
+      throw new Error(details
+        ? `La commande n’a pas été enregistrée (HTTP ${response.status}) : ${details}`
+        : `La commande n’a pas été enregistrée (HTTP ${response.status}).`)
     }
 
+    showOrderConfirmationModal.value = false
     // Success - show custom notification
     notificationTotal.value = cartTotal.value.toFixed(2)
     showNotification.value = true
@@ -700,11 +917,14 @@ async function placeOrder() {
     localStorage.removeItem('cart')
     cartItems.value = []
     comments.value = ''
+    selectedOrderTimeSlotId.value = ''
     window.dispatchEvent(new Event('cart-updated'))
 
   } catch (error) {
     console.error('Error confirming order:', error)
-    alert('Une erreur est survenue lors de la confirmation de la commande. Veuillez réessayer.')
+    orderConfirmationError.value = error instanceof Error
+      ? error.message
+      : 'Une erreur est survenue lors de la confirmation. Vérifiez votre connexion et réessayez.'
   } finally {
     isOrderProcessing.value = false
   }
@@ -743,7 +963,7 @@ async function ensureCartImages() {
 onMounted(() => {
   refreshCart()
   loadUserInfo()
-  fetchCanOrder()
+  fetchAvailableOrderTimeSlots()
   window.addEventListener('cart-updated', handleCartUpdated)
 })
 

@@ -29,7 +29,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h2 class="text-2xl font-bold">Besoins de Stock (Temps Réel)</h2>
-            <p class="text-indigo-200 text-sm mt-1">Estimations basées sur {{ stockData.totalPendingOrders }} commande(s) en attente</p>
+            <p class="text-indigo-200 text-sm mt-1">Estimations basées sur {{ stockData.totalPendingOrders }} commande(s) non livrée(s)</p>
           </div>
           <button @click="refreshAllData" class="self-start md:self-auto bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -59,7 +59,7 @@
               <div class="text-3xl font-bold">{{ stockData.totalItemsOrdered }}</div>
             </div>
             <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Commandes en Attente</div>
+              <div class="text-indigo-200 text-xs uppercase tracking-wider font-semibold mb-1">Commandes non livrées</div>
               <div class="text-3xl font-bold">{{ stockData.totalPendingOrders }}</div>
             </div>
           </div>
@@ -68,7 +68,7 @@
           <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden text-gray-900 flex flex-col">
             <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
               <h3 class="font-bold text-lg">Ingrédients Requis</h3>
-              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Arrondi Supérieur</span>
+              <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">Valeurs API divisées par 8</span>
             </div>
             <div class="p-6 grid grid-cols-2 sm:grid-cols-3 gap-6 flex-1">
               <div v-for="(data, name) in stockData.ingredientsRoundedUp" :key="name" class="flex flex-col">
@@ -77,7 +77,7 @@
                   {{ stockData.ingredientsPrecise[name]?.amount }} 
                   <span class="text-sm font-normal text-gray-600">{{ stockData.ingredientsPrecise[name]?.unit }}</span>
                 </span>
-                <span class="text-xs text-green-600 font-bold mt-1">Arrondi: {{ data.amount }} {{ data.unit }}</span>
+                <span class="text-xs text-green-600 font-bold mt-1">Arrondi / 8: {{ data.amount }} {{ data.unit }}</span>
               </div>
             </div>
           </div>
@@ -112,21 +112,39 @@
       <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8 space-y-4 sm:space-y-6">
         
         <!-- Filter Section -->
-        <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-100 overflow-hidden">
+        <div class="order-filters bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-100 overflow-hidden">
           <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
             <h2 class="text-base sm:text-lg font-semibold text-gray-900">Filtres et tri</h2>
           </div>
           <div class="px-4 sm:px-6 py-4 space-y-6">
+            <div class="order-search">
+              <label for="order-search" class="sr-only">Rechercher une commande</label>
+              <div class="relative">
+                <svg class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" stroke-width="2" />
+                  <path stroke-linecap="round" stroke-width="2" d="m16 16 4 4" />
+                </svg>
+                <input
+                  id="order-search"
+                  v-model="searchQuery"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="Rechercher par numéro, client, téléphone ou produit..."
+                  class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                />
+              </div>
+            </div>
             <!-- Status Filter -->
             <div>
               <h3 class="text-sm font-medium text-gray-700 mb-3">Filtrer par statut</h3>
-              <div class="flex flex-wrap gap-2 sm:gap-3">
+              <div class="status-filter-list flex flex-nowrap gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
                 <button 
                   v-for="status in orderStatuses" 
                   :key="status.value"
                   @click="selectedStatus = status.value"
+                  :aria-pressed="selectedStatus === status.value"
                   :class="[
-                    'px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors',
+                    'min-h-11 shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition-colors sm:text-sm',
                     selectedStatus === status.value 
                       ? 'bg-red-600 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -145,8 +163,9 @@
                   v-for="dateFilter in dateFilters" 
                   :key="dateFilter.value"
                   @click="selectedDateFilter = dateFilter.value"
+                  :aria-pressed="selectedDateFilter === dateFilter.value"
                   :class="[
-                    'px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors',
+                    'min-h-11 rounded-xl px-4 py-2 text-xs font-semibold transition-colors sm:text-sm',
                     selectedDateFilter === dateFilter.value 
                       ? 'bg-blue-600 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -161,9 +180,21 @@
 
         <!-- Orders List -->
         <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-100 overflow-hidden">
-          <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-            <h2 class="text-base sm:text-lg font-semibold text-gray-900">Toutes les commandes</h2>
-            <button @click="loadOrders" class="text-xs sm:text-sm text-gray-500 hover:text-gray-800 self-start sm:self-auto">Rafraîchir</button>
+          <div class="order-list-heading px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+            <div class="flex min-w-0 items-center gap-3">
+              <h2 class="text-base sm:text-lg font-semibold text-gray-900">Toutes les commandes</h2>
+              <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ filteredOrders.length }}</span>
+            </div>
+            <button
+              @click="loadOrders"
+              :disabled="isLoading"
+              class="refresh-orders-button inline-flex min-h-11 items-center justify-center gap-2 self-stretch rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-wait disabled:opacity-60 sm:self-auto"
+            >
+              <svg :class="{ 'animate-spin': isLoading }" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ isLoading ? 'Actualisation...' : 'Actualiser les commandes' }}
+            </button>
           </div>
           
           <div v-if="isLoading" class="px-4 sm:px-6 py-8 sm:py-12 text-center text-gray-500 text-sm sm:text-base">
@@ -180,37 +211,73 @@
             </svg>
             <p class="text-base sm:text-lg font-medium">Aucune commande trouvée</p>
             <p class="text-xs sm:text-sm text-gray-500 mt-1">
-              {{ selectedStatus === 'all' ? 'Aucune commande dans le système' : 'Aucune commande avec le statut "' + getStatusLabel(selectedStatus) + '"' }}
+            {{ searchQuery ? 'Essayez un autre nom, numéro ou produit.' : selectedStatus === 'all' ? 'Aucune commande dans le système' : 'Aucune commande avec le statut "' + getStatusLabel(selectedStatus) + '"' }}
             </p>
           </div>
           
-          <div v-else class="p-6">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div v-for="order in paginatedOrders" :key="order.orderId" class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300">
+          <div v-else class="p-3 sm:p-5 lg:p-6">
+            <div class="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6">
+              <div v-for="order in paginatedOrders" :key="order.orderId" class="order-admin-card rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-300 sm:rounded-3xl sm:p-6">
               <!-- Order Header -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-                <div>
-                  <h3 class="text-sm sm:text-base font-semibold text-gray-900">Commande #{{ order.orderId.slice(-8) }}</h3>
-                  <p class="text-xs sm:text-sm text-gray-500">{{ formatDate(order.orderDate) }}</p>
+              <div class="order-card-header mb-5 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
+                <div class="min-w-0">
+                  <h3 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Commande #{{ order.orderId.slice(-8) }}</h3>
+                  <p class="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{{ formatDate(order.orderDate) }}</p>
                   <div class="text-xs sm:text-sm text-gray-600 mt-1">
                     <span class="text-gray-500">Client:</span>
                     <span class="client-name-animation ml-1 font-medium text-blue-600">{{ order.customerName }}</span>
                   </div>
+                  <div class="text-xs sm:text-sm text-gray-600 mt-1">
+                    <span class="text-gray-500">Téléphone:</span>
+                    <a
+                      v-if="getCustomerPhone(order)"
+                      :href="`tel:${getCustomerPhone(order).replace(/[^\d+]/g, '')}`"
+                      class="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1 font-semibold text-green-700 shadow-sm transition-colors hover:border-green-300 hover:bg-green-100 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498A1 1 0 0121 15.72V19a2 2 0 01-2 2h-1C9.163 21 3 14.837 3 7V5z" />
+                      </svg>
+                      {{ getCustomerPhone(order) }}
+                    </a>
+                    <span v-else class="ml-1 text-gray-500">Non renseigné</span>
+                  </div>
                 </div>
-                <div class="flex flex-col sm:items-end gap-2">
+                <div class="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
                   <span :class="getStatusBadgeClass(order.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                     {{ getStatusLabel(order.status) }}
                   </span>
-                  <span class="text-sm sm:text-base font-bold text-gray-900">{{ order.totalAmount }} DT</span>
+                  <span class="text-base font-extrabold text-slate-900 sm:text-lg">{{ Number(order.totalAmount || 0).toFixed(2) }} DT</span>
                 </div>
               </div>
 
+              <section class="customer-details-panel mb-5" :aria-label="`Informations client de la commande ${order.orderId.slice(-8)}`">
+                <div class="mb-3 flex items-center gap-2">
+                  <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm" aria-hidden="true">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2m16 0v-2a4 4 0 00-3-3.87M14 3.13a4 4 0 010 7.75M14 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </span>
+                  <h4 class="text-sm font-bold text-slate-800">Adresse et autres coordonnées</h4>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div class="customer-detail">
+                    <span class="customer-detail-label">E-mail</span>
+                    <a v-if="getCustomerEmail(order)" :href="`mailto:${getCustomerEmail(order)}`" class="customer-detail-value customer-detail-link break-all">{{ getCustomerEmail(order) }}</a>
+                    <span v-else class="customer-detail-value text-slate-400">Non renseigné</span>
+                  </div>
+                  <div class="customer-detail sm:col-span-2">
+                    <span class="customer-detail-label">Adresse de livraison</span>
+                    <span class="customer-detail-value">{{ getCustomerAddress(order) || 'Non renseignée' }}</span>
+                  </div>
+                </div>
+              </section>
+
               <!-- Order Items -->
               <div class="mb-4">
-                <h4 class="text-xs sm:text-sm font-medium text-gray-700 mb-3">Articles commandés:</h4>
+                <h4 class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-600 sm:text-sm">Articles commandés <span class="ml-1 font-medium normal-case tracking-normal text-slate-400">({{ order.items?.length || 0 }})</span></h4>
                 <div class="order-items-container">
                   <div class="space-y-3">
-                    <div v-for="item in order.items" :key="item.orderItemId" class="flex items-center gap-3 py-3 px-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div v-for="item in order.items" :key="item.orderItemId" class="order-admin-item flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-3 transition-colors sm:px-4">
                       <!-- Product Image -->
                       <div class="flex-shrink-0">
                         <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-200">
@@ -226,20 +293,21 @@
                       
                       <!-- Product Info -->
                       <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">{{ item.productName }}</p>
-                        <p class="text-xs text-gray-500">Quantité: {{ item.quantity }} × {{ item.price }} DT</p>
+                        <p class="truncate text-sm font-semibold text-slate-900">{{ item.productName }}</p>
+                        <span class="product-category-badge mt-1 inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[10px] font-bold">{{ getProductCategory(item) }}</span>
+                        <p class="mt-1 text-xs text-slate-500">Quantité: {{ item.quantity }} × {{ Number(item.price || 0).toFixed(2) }} DT</p>
                       </div>
                       
                       <!-- Price -->
-                      <div class="flex-shrink-0 text-right">
-                        <span class="text-sm font-semibold text-gray-900">{{ (item.quantity * item.price).toFixed(2) }} DT</span>
+                      <div class="order-item-price flex-shrink-0 text-right">
+                        <span class="text-sm font-bold text-slate-900">{{ (Number(item.quantity || 0) * Number(item.price || 0)).toFixed(2) }} DT</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="mb-4 max-w-xs">
+              <div class="delivery-fee-field mb-4 max-w-xs">
                 <label :for="`delivery-fee-${order.orderId}`" class="mb-1 block text-xs sm:text-sm font-medium text-gray-700">Frais de livraison (DT)</label>
                 <input
                   :id="`delivery-fee-${order.orderId}`"
@@ -254,13 +322,28 @@
               </div>
 
               <!-- Comments -->
-              <div v-if="order.comments" class="mb-4 p-3 bg-blue-50 rounded-lg">
-                <h4 class="text-xs sm:text-sm font-medium text-blue-800 mb-1">Commentaires:</h4>
-                <p class="text-xs sm:text-sm text-blue-700">{{ order.comments }}</p>
+              <div class="order-comment-panel mb-5 rounded-2xl border p-3 sm:p-4">
+                <label :for="`order-comment-${order.orderId}`" class="mb-2 block text-xs sm:text-sm font-medium text-blue-800">Commentaire:</label>
+                <textarea
+                  :id="`order-comment-${order.orderId}`"
+                  v-model="commentDrafts[order.orderId]"
+                  rows="2"
+                  class="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ajouter un commentaire"
+                ></textarea>
+                <div class="mt-2 flex justify-end">
+                  <button
+                    @click="saveOrderComment(order)"
+                    :disabled="isSavingComment[order.orderId]"
+                    class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {{ isSavingComment[order.orderId] ? 'Enregistrement...' : 'Enregistrer le commentaire' }}
+                  </button>
+                </div>
               </div>
 
               <!-- Status Management -->
-              <div class="flex flex-col sm:flex-row gap-3 pt-3 border-t border-gray-100">
+              <div class="order-actions flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-end">
                 <div class="flex-1">
                   <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Modifier le statut:</label>
                   <select 
@@ -278,7 +361,7 @@
                     <option value="Cancelled">Annulée</option>
                   </select>
                 </div>
-                <div class="flex items-end gap-2">
+                <div class="order-action-buttons grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   <button 
                     @click="downloadInvoice(order)"
                     :disabled="isGeneratingInvoice[order.orderId]"
@@ -309,7 +392,7 @@
             </div>
             
             <!-- Pagination Controls -->
-            <div v-if="totalPages > 1" class="mt-8 flex items-center justify-between">
+            <div v-if="totalPages > 1" class="order-pagination mt-8 flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-700">
                   Page {{ currentPage }} sur {{ totalPages }}
@@ -319,7 +402,7 @@
                 </span>
               </div>
               
-              <div class="flex items-center space-x-2">
+              <div class="order-pagination-controls flex items-center space-x-2">
                 <!-- Previous Button -->
                 <button 
                   @click="goToPreviousPage"
@@ -539,12 +622,15 @@ const orders = ref([])
 const isLoading = ref(false)
 const selectedStatus = ref('all')
 const selectedDateFilter = ref('recent')
+const searchQuery = ref('')
 const showNotification = ref(false)
 const notificationMessage = ref('')
 const isUpdatingStatus = ref({})
 const isDeletingOrder = ref({})
 const isGeneratingInvoice = ref({})
 const deliveryFees = ref({})
+const commentDrafts = ref({})
+const isSavingComment = ref({})
 const deliveryFeesStorageKey = 'dsushi-admin-delivery-fees'
 
 // Delete modal state
@@ -554,23 +640,140 @@ const orderToDelete = ref(null)
 // Stock Data
 const stockData = ref(null)
 const pendingTotalData = ref(null)
+const piecesPerRoll = 8
 
-const fetchStockRequirements = async () => {
+const divideByPiecesPerRoll = value => {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? Number((amount / piecesPerRoll).toFixed(2)) : 0
+}
+
+const normalizeStockData = data => {
+  const totalRollouts = divideByPiecesPerRoll(data.totalRollouts)
+  const originalGroupSize = data.preciseGroups > 0
+    ? Math.round(Number(data.totalRollouts) / Number(data.preciseGroups))
+    : 0
+  const preciseGroups = originalGroupSize > 0 ? totalRollouts / originalGroupSize : 0
+
+  return {
+    ...data,
+    totalRollouts,
+    preciseGroups,
+    fullGroups: originalGroupSize > 0 ? Math.floor(preciseGroups) : 0,
+    remainder: originalGroupSize > 0
+      ? Number((totalRollouts % originalGroupSize).toFixed(2))
+      : divideByPiecesPerRoll(data.remainder),
+    perProduct: (data.perProduct || []).map(product => ({
+      ...product,
+      totalRollouts: divideByPiecesPerRoll(product.totalRollouts)
+    })),
+    ingredientsPrecise: Object.fromEntries(
+      Object.entries(data.ingredientsPrecise || {}).map(([name, ingredient]) => [name, {
+        ...ingredient,
+        amount: divideByPiecesPerRoll(ingredient.amount)
+      }])
+    ),
+    ingredientsRoundedUp: Object.fromEntries(
+      Object.entries(data.ingredientsRoundedUp || {}).map(([name, ingredient]) => [name, {
+        ...ingredient,
+        amount: divideByPiecesPerRoll(ingredient.amount)
+      }])
+    )
+  }
+}
+
+const fetchStockRequirements = async ordersToInclude => {
     const token = user.value?.token
     if (!token) return
 
     try {
-        const res = await fetch(api('/api/Admin/stock/requirements'), {
-            headers: { 
+        const nonDeliveredOrders = ordersToInclude.filter(order =>
+          String(order.status || '').toLowerCase() !== 'delivered'
+        )
+        const productsResponse = await fetch(api('/api/Product'), {
+            headers: {
                 'accept': '*/*',
-                'Authorization': `Bearer ${token}`
+                'Authorization': user.value?.token ? `Bearer ${user.value.token}` : ''
             }
         })
-        if (res.ok) {
-            stockData.value = await res.json()
+        if (!productsResponse.ok) {
+          throw new Error(`Failed to fetch products for stock requirements: HTTP ${productsResponse.status}`)
         }
-    } catch (e) {
-        console.error('Error fetching stock requirements:', e)
+
+        const products = await productsResponse.json()
+        if (!Array.isArray(products)) {
+          throw new Error('Invalid products response for stock requirements')
+        }
+        const productsById = new Map(products.map(product => [
+          String(product.productId ?? product.ProductId),
+          product
+        ]))
+        const perProduct = new Map()
+
+        for (const order of ordersToInclude) {
+          for (const item of Array.isArray(order.items) ? order.items : []) {
+            const product = productsById.get(String(item.productId ?? item.ProductId))
+            const category = product?.categoryName || product?.CategoryName ||
+              product?.category?.name || product?.Category?.Name
+            if (category) item.categoryName = category
+          }
+        }
+
+        for (const order of nonDeliveredOrders) {
+          for (const item of Array.isArray(order.items) ? order.items : []) {
+            const productId = String(item.productId ?? item.ProductId)
+            const product = productsById.get(productId)
+            const productStock = Number(product?.stock ?? product?.Stock)
+            const quantity = Number(item.quantity ?? item.Quantity)
+
+            if (!product || !Number.isFinite(productStock) || !Number.isFinite(quantity)) {
+              throw new Error(`Missing valid product stock or quantity for product ${productId}`)
+            }
+
+            const existing = perProduct.get(productId) || {
+              productId,
+              productName: item.productName || item.ProductName || product.name || product.Name,
+              totalQuantity: 0,
+              totalRollouts: 0
+            }
+            existing.totalQuantity += quantity
+            existing.totalRollouts += quantity * productStock
+            perProduct.set(productId, existing)
+          }
+        }
+
+        const productTotals = [...perProduct.values()]
+        const totalRollouts = productTotals.reduce((total, product) => total + product.totalRollouts, 0)
+        const totalItemsOrdered = productTotals.reduce((total, product) => total + product.totalQuantity, 0)
+        const preciseGroups = totalRollouts / 7
+        const roundedGroups = Math.ceil(preciseGroups)
+        const ingredientAmounts = {
+          rice: { precise: preciseGroups * 300, rounded: roundedGroups * 300, unit: 'g' },
+          water: { precise: preciseGroups * 400, rounded: roundedGroups * 400, unit: 'ml' },
+          vinegar: { precise: preciseGroups * 60, rounded: roundedGroups * 60, unit: 'ml' },
+          sugar: { precise: preciseGroups * 15, rounded: roundedGroups * 15, unit: 'g' },
+          salt: { precise: preciseGroups * 5, rounded: roundedGroups * 5, unit: 'g' }
+        }
+
+        stockData.value = normalizeStockData({
+          totalRollouts,
+          preciseGroups,
+          fullGroups: Math.floor(preciseGroups),
+          remainder: totalRollouts % 7,
+          totalItemsOrdered,
+          totalPendingOrders: nonDeliveredOrders.length,
+          perProduct: productTotals,
+          ingredientsPrecise: Object.fromEntries(Object.entries(ingredientAmounts).map(([name, amount]) => [
+            name,
+            { amount: amount.precise, unit: amount.unit }
+          ])),
+          ingredientsRoundedUp: Object.fromEntries(Object.entries(ingredientAmounts).map(([name, amount]) => [
+            name,
+            { amount: amount.rounded, unit: amount.unit }
+          ]))
+        })
+    } catch (error) {
+        console.error('Error fetching stock requirements:', error)
+        showNotificationMessage('Impossible de calculer les besoins de stock')
     }
 }
 
@@ -593,12 +796,14 @@ const fetchPendingTotal = async () => {
     }
 }
 
-const refreshAllData = async () => {
-    await Promise.all([
-        loadOrders(),
-        fetchStockRequirements(),
-        fetchPendingTotal()
+const refreshAllData = async ({ refreshOrders = true, refreshStock = true } = {}) => {
+    const [ordersLoaded] = await Promise.all([
+      refreshOrders ? loadOrders() : Promise.resolve(true),
+      fetchPendingTotal()
     ])
+    if (refreshStock && ordersLoaded) {
+      await fetchStockRequirements(orders.value)
+    }
 }
 
 onMounted(() => {
@@ -635,6 +840,23 @@ const dateFilters = [
 // Filtered and sorted orders
 const filteredOrders = computed(() => {
   let filtered = orders.value
+
+  const query = searchQuery.value.trim().toLocaleLowerCase('fr')
+  if (query) {
+    filtered = filtered.filter(order => {
+      const searchableValues = [
+        order.orderId,
+        order.customerName,
+        getCustomerPhone(order),
+        getCustomerEmail(order),
+        getCustomerAddress(order),
+        ...(Array.isArray(order.items) ? order.items.map(item => item.productName) : [])
+      ]
+      return searchableValues.some(value =>
+        String(value ?? '').toLocaleLowerCase('fr').includes(query)
+      )
+    })
+  }
   
   // Filter by status
   if (selectedStatus.value !== 'all') {
@@ -683,10 +905,11 @@ async function loadOrders() {
   if (!token) {
     console.error('No token available')
     showNotificationMessage('Vous devez être connecté pour voir les commandes')
-    return
+    return false
   }
   
   isLoading.value = true
+  let loadedOrders
   try {
     const response = await fetch(api('/api/order'), {
       method: 'GET',
@@ -697,26 +920,53 @@ async function loadOrders() {
     })
     
     if (!response.ok) {
-      throw new Error('Failed to fetch orders')
+      throw new Error(`Failed to fetch orders: HTTP ${response.status}`)
     }
     
     const data = await response.json()
-    orders.value = Array.isArray(data) ? data : []
-    const savedDeliveryFees = JSON.parse(localStorage.getItem(deliveryFeesStorageKey) || '{}')
-    deliveryFees.value = Object.fromEntries(orders.value.map(order => [
-      order.orderId,
-      savedDeliveryFees[order.orderId] ?? order.deliveryFee ?? order.DeliveryFee ?? ''
-    ]))
-    
-    // Load product images for each order item
-    await loadProductImages()
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid orders response: expected an array')
+    }
+    loadedOrders = data
   } catch (error) {
     console.error('Error loading orders:', error)
-    orders.value = []
-    showNotificationMessage('Erreur lors du chargement des commandes')
+    const detail = error instanceof Error && error.message.includes('HTTP ')
+      ? ` (${error.message.match(/HTTP \d+/)?.[0]})`
+      : ''
+    showNotificationMessage(`Erreur lors du chargement des commandes${detail}`)
+    return false
   } finally {
     isLoading.value = false
   }
+
+  orders.value = loadedOrders
+  commentDrafts.value = Object.fromEntries(orders.value.map(order => [
+    order.orderId,
+    order.comments || ''
+  ]))
+
+  let savedDeliveryFees = {}
+  try {
+    const storedDeliveryFees = JSON.parse(localStorage.getItem(deliveryFeesStorageKey) || '{}')
+    if (!storedDeliveryFees || typeof storedDeliveryFees !== 'object' || Array.isArray(storedDeliveryFees)) {
+      throw new Error('Invalid saved delivery fees')
+    }
+    savedDeliveryFees = storedDeliveryFees
+  } catch (error) {
+    console.error('Error loading saved delivery fees:', error)
+  }
+  deliveryFees.value = Object.fromEntries(orders.value.map(order => [
+    order.orderId,
+    savedDeliveryFees[order.orderId] ?? order.deliveryFee ?? order.DeliveryFee ?? ''
+  ]))
+
+  try {
+    await loadCustomerDetails(orders.value)
+    await loadProductImages()
+  } catch (error) {
+    console.error('Error loading supplementary order data:', error)
+  }
+  return true
 }
 
 // Load product images for all order items
@@ -725,7 +975,7 @@ async function loadProductImages() {
   if (!token) return
   
   for (const order of orders.value) {
-    for (const item of order.items) {
+    for (const item of Array.isArray(order.items) ? order.items : []) {
       try {
         const response = await fetch(api(`/api/Product/${item.productId}/images`), {
           method: 'GET',
@@ -752,6 +1002,37 @@ async function loadProductImages() {
   }
 }
 
+async function saveOrderComment(order) {
+  const token = user.value?.token
+  if (!token) {
+    showNotificationMessage('Vous devez être connecté pour modifier le commentaire')
+    return
+  }
+
+  isSavingComment.value[order.orderId] = true
+  try {
+    const response = await fetch(api(`/api/order/${order.orderId}/comments`), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'accept': '*/*',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(commentDrafts.value[order.orderId] || '')
+    })
+
+    if (!response.ok) throw new Error(`Failed to update order comment: ${response.status}`)
+
+    order.comments = commentDrafts.value[order.orderId] || ''
+    showNotificationMessage('Commentaire mis à jour avec succès')
+  } catch (error) {
+    console.error('Error updating order comment:', error)
+    showNotificationMessage('Erreur lors de la mise à jour du commentaire')
+  } finally {
+    isSavingComment.value[order.orderId] = false
+  }
+}
+
 function getProductImageUrl(imagePath) {
   return resolveImage(imagePath)
 }
@@ -761,6 +1042,138 @@ function saveDeliveryFee(orderId, value) {
   const savedDeliveryFees = JSON.parse(localStorage.getItem(deliveryFeesStorageKey) || '{}')
   savedDeliveryFees[orderId] = value
   localStorage.setItem(deliveryFeesStorageKey, JSON.stringify(savedDeliveryFees))
+}
+
+function getCustomerPhone(order) {
+  const customer = order.customer || order.Customer || {}
+  const phone = [
+    order.customerPhone, order.CustomerPhone,
+    order.customerPhoneNumber, order.CustomerPhoneNumber,
+    order.phone, order.Phone,
+    order.phoneNumber, order.PhoneNumber,
+    order.mobile, order.Mobile,
+    order.mobilePhone, order.MobilePhone,
+    order.telephone, order.Telephone,
+    order.tel, order.Tel,
+    order.contactNumber, order.ContactNumber,
+    customer.phone, customer.Phone,
+    customer.phoneNumber, customer.PhoneNumber,
+    customer.mobile, customer.Mobile,
+    customer.mobilePhone, customer.MobilePhone,
+    customer.telephone, customer.Telephone,
+    customer.tel, customer.Tel,
+    customer.contactNumber, customer.ContactNumber
+  ].map(value => String(value ?? '').trim())
+    .find(value => value && value.toLowerCase() !== 'string')
+
+  return phone || ''
+}
+
+function getCustomerEmail(order) {
+  const customer = order.customer || order.Customer || {}
+  return [
+    order.customerEmail, order.CustomerEmail, order.email, order.Email,
+    customer.email, customer.Email
+  ].map(value => String(value ?? '').trim())
+    .find(value => value && value.toLowerCase() !== 'string') || ''
+}
+
+function getCustomerAddress(order) {
+  const customer = order.customer || order.Customer || {}
+  return [
+    order.customerAddress, order.CustomerAddress,
+    order.deliveryAddress, order.DeliveryAddress,
+    order.shippingAddress, order.ShippingAddress,
+    order.address, order.Address,
+    customer.address, customer.Address,
+    customer.deliveryAddress, customer.DeliveryAddress,
+    customer.shippingAddress, customer.ShippingAddress
+  ].map(value => String(value ?? '').trim())
+    .find(value => value && value.toLowerCase() !== 'string') || ''
+}
+
+function getProductCategory(item) {
+  const category = item.categoryName || item.CategoryName ||
+    item.category?.name || item.Category?.Name
+  return category || 'Catégorie non renseignée'
+}
+
+function getCustomerProfiles(data) {
+  const profile = data?.user || data?.User || data?.profile || data?.Profile || data?.data || data?.Data || data
+  return (Array.isArray(profile) ? profile : [profile])
+    .filter(candidate => candidate && typeof candidate === 'object')
+}
+
+async function loadCustomerDetails(ordersToLoad) {
+  const token = user.value?.token
+  if (!token) return
+
+  await Promise.all(ordersToLoad.map(async order => {
+    if (getCustomerPhone(order) && getCustomerEmail(order) && getCustomerAddress(order)) return
+
+    const customer = order.customer || order.Customer || {}
+    const customerId = [
+      order.customerId, order.CustomerId, order.userId, order.UserId,
+      customer.userId, customer.UserId, customer.id, customer.Id
+    ].map(value => String(value ?? '').trim())
+      .find(value => value && value.toLowerCase() !== 'string')
+    const customerName = [
+      order.customerName, order.CustomerName,
+      customer.name, customer.Name, customer.userName, customer.UserName
+    ].map(value => String(value ?? '').trim())
+      .find(value => value && value.toLowerCase() !== 'string')
+
+    const profileRequests = []
+    if (customerId) {
+      profileRequests.push({
+        url: api(`/api/Users/${encodeURIComponent(customerId)}`),
+        kind: 'id'
+      })
+    }
+    if (customerName) {
+      profileRequests.push({
+        url: api(`/api/Users/info?name=${encodeURIComponent(customerName)}`),
+        kind: 'name'
+      })
+    }
+    if (!profileRequests.length) return
+
+    const results = await Promise.allSettled(profileRequests.map(async ({ url }) => {
+      const response = await fetch(url, {
+        headers: {
+          accept: '*/*',
+          Authorization: `Bearer ${token}`
+        },
+        cache: 'no-store'
+      })
+      if (!response.ok) return ''
+      return await response.json()
+    }))
+
+    for (let index = 0; index < results.length; index += 1) {
+      const result = results[index]
+      if (result.status === 'rejected') {
+        console.error(`Error loading phone for order ${order.orderId} (${profileRequests[index].kind} lookup):`, result.reason)
+      } else if (result.value) {
+        const profiles = getCustomerProfiles(result.value)
+        const matchingProfile = profiles.find(profile =>
+          String(profile.name || profile.Name || profile.userName || profile.UserName || '')
+            .trim().toLowerCase() === (customerName || '').toLowerCase()
+        ) || (profileRequests[index].kind === 'id' && profiles.length === 1 ? profiles[0] : null)
+        if (!matchingProfile) continue
+
+        order.customerPhone ||= getCustomerPhone({ customer: matchingProfile })
+        order.customerEmail ||= matchingProfile.email || matchingProfile.Email || ''
+        order.customerAddress ||= matchingProfile.address || matchingProfile.Address ||
+          matchingProfile.deliveryAddress || matchingProfile.DeliveryAddress ||
+          matchingProfile.shippingAddress || matchingProfile.ShippingAddress || ''
+        order.customerName ||= matchingProfile.name || matchingProfile.Name ||
+          matchingProfile.userName || matchingProfile.UserName || ''
+
+        if (getCustomerPhone(order) && getCustomerEmail(order) && getCustomerAddress(order)) return
+      }
+    }
+  }))
 }
 
 // Handle image loading errors
@@ -1037,7 +1450,7 @@ async function confirmStatusChange() {
     
     showNotificationMessage(`Statut de la commande mis à jour vers "${getStatusLabel(newStatus)}"`)
     closeStatusModal()
-    refreshAllData() // Refresh dashboard after status change
+    refreshAllData({ refreshOrders: false, refreshStock: newStatus === 'Delivered' })
   } catch (error) {
     console.error('Error updating order status:', error)
     showNotificationMessage('Erreur lors de la mise à jour du statut')
@@ -1240,7 +1653,7 @@ function getVisiblePages() {
 }
 
 // Reset pagination when filters change
-watch([selectedStatus, selectedDateFilter], () => {
+watch([selectedStatus, selectedDateFilter, searchQuery], () => {
   currentPage.value = 1
 })
 
@@ -1712,6 +2125,190 @@ watch([selectedStatus, selectedDateFilter], () => {
   }
 }
 
+.order-admin-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at top right, rgba(224, 231, 255, 0.38), transparent 38%),
+    linear-gradient(160deg, #ffffff 0%, #fbfcff 100%);
+  box-shadow: 0 8px 24px -18px rgba(15, 23, 42, 0.4);
+}
+
+.order-admin-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 22px 44px -28px rgba(30, 41, 59, 0.5);
+  transform: translateY(-3px);
+}
+
+.order-card-header h3 {
+  overflow-wrap: anywhere;
+}
+
+.order-card-header > div:first-child > div {
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+
+.order-card-header > div:first-child > div > span:first-child {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.order-card-header > div:last-child > span:first-child {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 0.35rem 0.75rem;
+  font-weight: 700;
+}
+
+.customer-details-panel {
+  border: 1px solid #e1e7ff;
+  border-radius: 1.15rem;
+  background: linear-gradient(135deg, #f4f6ff 0%, #fafbff 100%);
+  padding: 1rem;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.customer-detail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.65rem 0.75rem;
+}
+
+.customer-detail-label {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customer-detail-value {
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.customer-detail-link {
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.customer-detail-link:hover {
+  color: #3730a3;
+  text-decoration: underline;
+}
+
+.order-admin-item {
+  background: linear-gradient(120deg, #f8fafc 0%, #ffffff 100%);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.025);
+}
+
+.order-admin-item:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.order-admin-item img {
+  transition: transform 0.25s ease;
+}
+
+.order-admin-item:hover img {
+  transform: scale(1.06);
+}
+
+.product-category-badge {
+  width: fit-content;
+  border: 1px solid #e0e7ff;
+  background: #eef2ff;
+  color: #4338ca;
+  line-height: 1.2;
+}
+
+.delivery-fee-field input,
+.order-actions select,
+.order-comment-panel textarea {
+  min-height: 2.75rem;
+  border-radius: 0.8rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.delivery-fee-field input:focus,
+.order-actions select:focus,
+.order-comment-panel textarea:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.order-comment-panel {
+  border-color: #dbeafe;
+  background: linear-gradient(135deg, #f4f8ff 0%, #f8fbff 100%);
+}
+
+.order-comment-panel button,
+.order-action-buttons button {
+  min-height: 2.65rem;
+  border-radius: 0.8rem;
+  font-weight: 700;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.order-comment-panel button:hover:not(:disabled),
+.order-action-buttons button:hover:not(:disabled) {
+  box-shadow: 0 7px 16px -10px currentColor;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 639px) {
+  .customer-details-panel {
+    padding: 0.8rem;
+  }
+
+  .order-admin-item {
+    align-items: flex-start;
+  }
+
+  .order-admin-item > div:first-child {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .order-admin-item > div:last-child {
+    max-width: 5.5rem;
+    padding-top: 0.25rem;
+  }
+
+  .order-action-buttons button {
+    width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-admin-card,
+  .order-admin-item img,
+  .order-comment-panel button,
+  .order-action-buttons button {
+    transition: none;
+  }
+
+  .order-admin-card:hover,
+  .order-admin-item:hover img,
+  .order-comment-panel button:hover:not(:disabled),
+  .order-action-buttons button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
 /* Order items scrollable container */
 .order-items-container {
   max-height: 200px;
@@ -1761,5 +2358,130 @@ watch([selectedStatus, selectedDateFilter], () => {
     width: 4px;
   }
   }
+
+.order-admin-card {
+  min-width: 0;
+}
+
+.status-filter-list {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.order-search input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.refresh-orders-button,
+.order-actions select,
+.delivery-fee-field input,
+.order-comment-panel textarea,
+.order-comment-panel button,
+.order-action-buttons button,
+.order-pagination button {
+  min-height: 2.75rem;
+}
+
+.order-item-price {
+  max-width: 7.5rem;
+  overflow-wrap: anywhere;
+}
+
+.order-pagination-controls {
+  min-width: 0;
+}
+
+@media (max-width: 639px) {
+  .order-filters > div:last-child {
+    gap: 1.25rem;
+  }
+
+  .order-admin-card {
+    padding: 1rem;
+    border-radius: 1.15rem;
+  }
+
+  .order-card-header {
+    align-items: stretch;
+  }
+
+  .order-card-header > div:last-child {
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .order-card-header > div:last-child > span:last-child {
+    font-size: 1.1rem;
+  }
+
+  .order-card-header a[href^="tel:"] {
+    min-height: 2.5rem;
+  }
+
+  .order-admin-item {
+    gap: 0.65rem;
+    padding: 0.65rem;
+  }
+
+  .order-admin-item > div:last-child {
+    max-width: 7rem;
+  }
+
+  .order-item-price {
+    max-width: 6.25rem;
+    font-size: 0.8rem;
+  }
+
+  .delivery-fee-field {
+    max-width: none;
+  }
+
+  .order-comment-panel button,
+  .order-action-buttons button {
+    min-height: 2.85rem;
+  }
+
+  .order-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .order-pagination > div:first-child {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .order-pagination-controls {
+    justify-content: space-between;
+  }
+
+  .order-pagination-controls > div {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .order-pagination-controls > div::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .order-admin-card {
+    padding: 0.8rem;
+  }
+
+  .order-pagination-controls > div {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-filter-list {
+    scroll-behavior: auto;
+  }
+}
   </style>
   

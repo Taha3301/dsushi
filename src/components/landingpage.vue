@@ -1,4 +1,15 @@
 <template>
+  <div
+    v-if="serviceUnavailable"
+    role="alert"
+    class="mx-4 mt-4 flex items-center justify-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-orange-50 px-5 py-4 text-center text-sm font-medium leading-6 text-amber-950 shadow-md shadow-amber-950/5 md:mx-auto md:max-w-5xl"
+  >
+    <svg class="h-5 w-5 shrink-0 text-amber-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fill-rule="evenodd" d="M9.401 1.598a1.75 1.75 0 0 1 3.198 0l6.12 13.158A1.75 1.75 0 0 1 17.12 17.25H2.88a1.75 1.75 0 0 1-1.599-2.494L7.4 1.598a1.75 1.75 0 0 1 2.001 0ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 7.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+    </svg>
+    <span>Nous serons bientôt de retour. Réessayez dans quelques instants.</span>
+  </div>
+
   <!-- Hero Section -->
   <section class="hero-section relative min-h-[auto] md:min-h-[85vh] flex flex-col items-center justify-start py-4 md:py-6 overflow-hidden" style="background-color: #E3E3E3;">
     <!-- Sushi Background Elements (Hidden on Mobile to prevent overflow) -->
@@ -288,8 +299,16 @@
             </span>
           </h2>
           <p class="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Des sushis maison faits avec amour, préparés pour vous à Djerba. 
-            <span class="text-red-600 font-semibold">Rendez-vous chaque samedi de 18h à 21h.</span>
+            Des sushis maison faits avec amour, préparés pour vous à Djerba.
+            <span v-if="isOrderTimeSlotsLoading" class="block mt-2 text-sm text-gray-500">Chargement des prochains créneaux...</span>
+            <span v-else-if="orderTimeSlotsError" class="block mt-2 text-sm text-gray-500">Les prochains créneaux seront bientôt annoncés.</span>
+            <span v-else-if="!upcomingOrderTimeSlots.length" class="block mt-2 text-sm text-gray-500">Aucun créneau à venir pour le moment.</span>
+            <span v-else class="block mt-2 text-red-600 font-semibold">
+              Prochains créneaux :
+              <span v-for="(slot, index) in upcomingOrderTimeSlots" :key="slot.key">
+                {{ index ? ' · ' : ' ' }}{{ formatOrderTimeSlot(slot.date, slot.time) }}
+              </span>
+            </span>
         </p>
       </div>
         
@@ -301,7 +320,7 @@
               </svg>
             </div>
               <h3 class="font-semibold text-gray-900 mb-2">Commande en ligne</h3>
-            <p class="text-sm text-gray-600">Découvrez le menu du samedi</p>
+            <p class="text-sm text-gray-600">Découvrez le menu et les prochains créneaux</p>
           </div>
           
           <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
@@ -320,8 +339,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
               </svg>
             </div>
-            <h3 class="font-semibold text-gray-900 mb-2">Chaque samedi</h3>
-            <p class="text-sm text-gray-600">Service de 18h à 21h à Houmt Souk</p>
+            <h3 class="font-semibold text-gray-900 mb-2">Prochains créneaux</h3>
+            <p v-if="isOrderTimeSlotsLoading" class="text-sm text-gray-600">Chargement...</p>
+            <p v-else-if="orderTimeSlotsError" class="text-sm text-gray-600">Les dates seront bientôt annoncées.</p>
+            <p v-else-if="!upcomingOrderTimeSlots.length" class="text-sm text-gray-600">Aucun créneau à venir.</p>
+            <p v-else class="text-sm text-gray-600">
+              <span v-for="slot in upcomingOrderTimeSlots" :key="slot.key" class="block">{{ formatOrderTimeSlot(slot) }}</span>
+            </p>
           </div>
         </div>
       </div>
@@ -387,7 +411,7 @@
           </h2>
           <p class="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
             Pas de restaurant, mais des sushis maison qui ont encore plus de goût. Découvrez notre sélection et préparez votre commande. 
-            <span class="text-red-600 font-semibold">Nous vous retrouvons chaque samedi à Houmt Souk, Djerba.</span>
+            <span class="text-red-600 font-semibold">Nous vous retrouvons à Houmt Souk, Djerba.</span>
           </p>
         </div>
         
@@ -411,8 +435,13 @@
               </svg>
             </div>
       <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Le samedi</h3>
-              <p class="text-gray-600">Commandes et service de 18h à 21h</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Prochains créneaux</h3>
+              <p v-if="isOrderTimeSlotsLoading" class="text-gray-600">Chargement des dates...</p>
+              <p v-else-if="orderTimeSlotsError" class="text-gray-600">Les dates seront bientôt annoncées.</p>
+              <p v-else-if="!upcomingOrderTimeSlots.length" class="text-gray-600">Aucun créneau à venir.</p>
+              <p v-else class="text-gray-600">
+                <span v-for="slot in upcomingOrderTimeSlots" :key="slot.key" class="block">{{ formatOrderTimeSlot(slot) }}</span>
+              </p>
             </div>
           </div>
           
@@ -431,7 +460,7 @@
         
         <div class="pt-4">
           <button @click="goToProduits" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-full hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-            Voir le menu du samedi
+            Voir le menu
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
             </svg>
@@ -467,8 +496,14 @@
             </span>
           </h2>
           <p class="text-base md:text-lg text-gray-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Découvrez le menu, choisissez vos préférés et préparez votre commande pour le prochain service. 
-            <span class="text-red-400 font-semibold">Samedi, de 18h à 21h à Houmt Souk.</span>
+            Découvrez le menu, choisissez vos préférés et préparez votre commande pour le prochain service à Houmt Souk.
+            <span v-if="upcomingOrderTimeSlots.length" class="text-red-400 font-semibold">
+              Prochains créneaux :
+              <span v-for="(slot, index) in upcomingOrderTimeSlots" :key="slot.key">
+                {{ index ? ' · ' : ' ' }}{{ formatOrderTimeSlot(slot) }}
+              </span>
+            </span>
+            <span v-else-if="!isOrderTimeSlotsLoading" class="text-red-400 font-semibold">Les prochaines dates seront bientôt annoncées.</span>
           </p>
         </div>
         
@@ -480,9 +515,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">18h</span>
+              <span v-if="upcomingOrderTimeSlots[0]" class="text-sm font-bold text-white">{{ formatOrderTimeSlot(upcomingOrderTimeSlots[0]) }}</span>
+              <span v-else class="text-sm font-bold text-white">À venir</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Samedi</h3>
+            <h3 class="text-white font-semibold mb-2">Prochain créneau</h3>
             <p class="text-gray-300 text-sm">Le rendez-vous D.Sushi</p>
           </div>
           
@@ -506,10 +542,10 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-white">21h</span>
+              <span class="text-2xl font-bold text-white">{{ upcomingOrderTimeSlots.length }}</span>
             </div>
-            <h3 class="text-white font-semibold mb-2">Fin du service</h3>
-            <p class="text-gray-300 text-sm">Jusqu'à 21h le samedi</p>
+            <h3 class="text-white font-semibold mb-2">Dates disponibles</h3>
+            <p class="text-gray-300 text-sm">Créneaux définis par l’administration</p>
           </div>
           
           <div class="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
@@ -552,7 +588,7 @@
           <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 shadow-lg">
             <div class="flex items-center space-x-2">
               <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span class="text-xs font-medium text-gray-700">Samedi 18h–21h</span>
+              <span class="text-xs font-medium text-gray-700">Créneaux disponibles</span>
             </div>
           </div>
         </div>
@@ -634,6 +670,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../stores/auth.js'
 import { api, resolveImage } from '../utils/api.js'
+import { useOrderTimeSlots } from '../composables/useOrderTimeSlots.js'
 
 const CURRENCY = (import.meta?.env?.VITE_CURRENCY || 'TND').toUpperCase()
 const LOCALE   = import.meta?.env?.VITE_LOCALE || 'fr-TN'
@@ -654,8 +691,16 @@ const isMenuModalOpen = ref(false)
 const currentSlideIndex = ref(0)
 const router = useRouter()
 const { isAuthenticated, user } = useAuth()
+const {
+  upcomingOrderTimeSlots,
+  isOrderTimeSlotsLoading,
+  orderTimeSlotsError,
+  formatOrderTimeSlot,
+  loadOrderTimeSlots
+} = useOrderTimeSlots()
 const allProducts = ref([])
 const categories = ref([])
+const serviceUnavailable = ref(false)
 const selectedCategory = ref('')
 const showcaseTrackRef = ref(null)
 const favoriteProductIds = ref(new Set())
@@ -748,6 +793,7 @@ async function loadProducts() {
   try {
     const res = await fetch(api('/api/Product'), { headers: { accept: '*/*' } })
     if (res.ok) allProducts.value = await res.json()
+    else if (res.status === 500) serviceUnavailable.value = true
   } catch { /* silent */ }
 }
 
@@ -755,6 +801,7 @@ async function loadCategories() {
   try {
     const res = await fetch(api('/api/Category'), { headers: { accept: '*/*' } })
     if (res.ok) categories.value = await res.json()
+    else if (res.status === 500) serviceUnavailable.value = true
   } catch { /* silent */ }
 }
 
@@ -816,7 +863,9 @@ const menuImages = import.meta.glob('../assets/images/menu/*.{jpg,jpeg,png,webp}
   query: '?url',
   import: 'default'
 })
-const slides = Object.values(menuImages)
+const slides = Object.entries(menuImages)
+  .sort(([pathA], [pathB]) => pathA.localeCompare(pathB, undefined, { numeric: true }))
+  .map(([, imageUrl]) => imageUrl)
 
 function openMenuPopup() {
   isMenuModalOpen.value = true
@@ -849,6 +898,7 @@ function handleKeydown(event) {
 onMounted(() => {
   loadProducts()
   loadCategories()
+  loadOrderTimeSlots()
   heroSlideTimer = window.setInterval(advanceHeroSlide, 5200)
   window.addEventListener('keydown', handleKeydown)
   

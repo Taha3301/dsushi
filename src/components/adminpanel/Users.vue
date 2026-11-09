@@ -5,11 +5,18 @@
 
       <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 sm:p-6">
         <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
             <button @click="loadUsers" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 h-10 text-xs font-semibold text-gray-900 shadow-sm hover:border-gray-400 hover:bg-gray-50">
               Rafraîchir
             </button>
             <span v-if="isLoading" class="text-xs text-gray-500">Chargement...</span>
+            <input
+              v-model="nameFilter"
+              type="search"
+              aria-label="Filtrer les utilisateurs par nom"
+              placeholder="Filtrer par nom..."
+              class="w-full sm:w-64 px-3 h-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            />
           </div>
           <div v-if="errorMessage" class="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs">{{ errorMessage }}</div>
         </div>
@@ -22,6 +29,7 @@
                 <th class="px-3 py-2">Email</th>
                 <th class="px-3 py-2">ID</th>
                 <th class="px-3 py-2">Permission</th>
+                <th class="px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -45,9 +53,67 @@
                     </span>
                   </label>
                 </td>
+                <td class="px-3 py-2">
+                  <button
+                    type="button"
+                    :disabled="deletingUserIds.includes(u.userId)"
+                    @click="requestUserDeletion(u)"
+                    class="inline-flex items-center justify-center rounded-lg bg-red-600 text-white px-3 h-9 text-xs font-semibold shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ deletingUserIds.includes(u.userId) ? 'Suppression...' : 'Supprimer' }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div v-if="showVerifyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md p-6">
+            <div class="mb-5">
+              <h2 class="text-xl font-bold text-gray-900">Confirmation de sécurité</h2>
+              <p class="text-sm text-gray-500 mt-1">
+                Saisissez votre mot de passe pour supprimer le compte de {{ userToDelete?.name }}.
+              </p>
+            </div>
+
+            <form @submit.prevent="verifyPasswordAndDeleteUser" class="space-y-4">
+              <div>
+                <label for="deleteUserPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                  Votre mot de passe
+                </label>
+                <input
+                  id="deleteUserPassword"
+                  v-model="verifyPassword"
+                  type="password"
+                  required
+                  autocomplete="current-password"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div v-if="verifyError" class="text-sm text-red-600 font-medium">{{ verifyError }}</div>
+
+              <div class="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  :disabled="isVerifying || !verifyPassword"
+                  class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white px-5 h-11 text-sm font-semibold shadow-sm hover:bg-red-700 disabled:opacity-50"
+                >
+                  {{ isVerifying ? 'Vérification...' : 'Confirmer la suppression' }}
+                </button>
+                <button
+                  type="button"
+                  :disabled="isVerifying"
+                  @click="closeVerifyModal"
+                  class="flex-1 inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 h-11 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +132,19 @@ const { user } = useAuth()
 const users = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
+const nameFilter = ref('')
 const updatingUserIds = ref([])
+const deletingUserIds = ref([])
+const showVerifyModal = ref(false)
+const userToDelete = ref(null)
+const verifyPassword = ref('')
+const isVerifying = ref(false)
+const verifyError = ref('')
+
+const authHeaders = () => ({
+  accept: '*/*',
+  ...(user.value?.token ? { Authorization: `Bearer ${user.value.token}` } : {})
+})
 
 const currentUserId = computed(() => {
   if (user.value?.userId || user.value?.id) return String(user.value.userId || user.value.id)
@@ -82,11 +160,16 @@ const currentUserId = computed(() => {
   }
 })
 
-const visibleUsers = computed(() => users.value.filter((listedUser) => {
-  if (currentUserId.value && String(listedUser.userId).toLowerCase() === currentUserId.value.toLowerCase()) return false
-  const currentEmail = user.value?.email?.trim().toLowerCase()
-  return !currentEmail || listedUser.email?.trim().toLowerCase() !== currentEmail
-}))
+const visibleUsers = computed(() => {
+  const normalizedFilter = nameFilter.value.trim().toLocaleLowerCase()
+
+  return users.value.filter((listedUser) => {
+    if (currentUserId.value && String(listedUser.userId).toLowerCase() === currentUserId.value.toLowerCase()) return false
+    const currentEmail = user.value?.email?.trim().toLowerCase()
+    if (currentEmail && listedUser.email?.trim().toLowerCase() === currentEmail) return false
+    return !normalizedFilter || String(listedUser.name || '').toLocaleLowerCase().includes(normalizedFilter)
+  })
+})
 
 const loadUsers = async () => {
   isLoading.value = true
@@ -129,6 +212,77 @@ const updatePermission = async (targetUser, permission) => {
     errorMessage.value = 'Impossible de modifier la permission.'
   } finally {
     updatingUserIds.value = updatingUserIds.value.filter(id => id !== targetUser.userId)
+  }
+}
+
+const requestUserDeletion = (targetUser) => {
+  userToDelete.value = targetUser
+  verifyPassword.value = ''
+  verifyError.value = ''
+  showVerifyModal.value = true
+}
+
+const closeVerifyModal = () => {
+  showVerifyModal.value = false
+  userToDelete.value = null
+  verifyPassword.value = ''
+  verifyError.value = ''
+}
+
+const verifyPasswordAndDeleteUser = async () => {
+  const targetUser = userToDelete.value
+  if (!targetUser || !verifyPassword.value || isVerifying.value) return
+
+  isVerifying.value = true
+  verifyError.value = ''
+  let failureStage = 'password verification'
+
+  try {
+    const verificationResponse = await fetch(api('/api/Auth/me/verify-password'), {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: verifyPassword.value })
+    })
+
+    if (verificationResponse.status === 401) {
+      verifyError.value = 'Mot de passe incorrect.'
+      return
+    }
+    if (!verificationResponse.ok) {
+      const details = await verificationResponse.text()
+      throw new Error(`Vérification refusée (HTTP ${verificationResponse.status})${details ? ` : ${details}` : ''}`)
+    }
+
+    const verificationData = await verificationResponse.json()
+    if (!verificationData.valid) {
+      verifyError.value = 'Mot de passe incorrect.'
+      return
+    }
+
+    failureStage = 'user deletion'
+    deletingUserIds.value.push(targetUser.userId)
+    const deleteResponse = await fetch(api(`/api/Users/${encodeURIComponent(targetUser.userId)}`), {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+    if (!deleteResponse.ok) {
+      const details = await deleteResponse.text()
+      throw new Error(`Suppression refusée (HTTP ${deleteResponse.status})${details ? ` : ${details}` : ''}`)
+    }
+
+    users.value = users.value.filter((listedUser) => listedUser.userId !== targetUser.userId)
+    closeVerifyModal()
+  } catch (error) {
+    console.error(error)
+    verifyError.value = failureStage === 'user deletion'
+      ? `Mot de passe accepté, mais l’API de suppression a échoué. ${error.message}`
+      : `La vérification du mot de passe a échoué. ${error.message}`
+  } finally {
+    deletingUserIds.value = deletingUserIds.value.filter((id) => id !== targetUser.userId)
+    isVerifying.value = false
   }
 }
 

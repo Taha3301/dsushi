@@ -21,15 +21,15 @@ const showFooter = computed(() => !hideForAuthPages.value && !isAdmin.value)
   <AltNavbar v-if="showNavbar" />
 
   <!-- Admin layout with sidebar -->
-  <div v-if="showSidebar" class="md:grid md:grid-cols-[16rem_1fr] min-h-screen">
+  <div v-if="showSidebar" class="min-h-screen w-full md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
     <AdminSideBar />
-    <div>
+    <main class="min-w-0 w-full">
       <router-view />
-    </div>
+    </main>
   </div>
 
   <!-- Default layout without sidebar -->
-  <div v-else :class="showNavbar ? 'pb-24 md:pb-0' : ''">
+  <div v-else :class="[showNavbar ? 'pb-24 md:pb-0' : '', 'min-w-0 w-full']">
     <router-view />
   </div>
   <Footer v-if="showFooter" />

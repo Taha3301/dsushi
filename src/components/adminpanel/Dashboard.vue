@@ -8,34 +8,23 @@
 
     <!-- Dashboard Content -->
     <div v-else class="dashboard-content">
+      <p v-if="dashboardLoadTimedOut" class="dashboard-load-warning" role="status">
+        Certaines données tardent à charger. Le tableau reste disponible ; vous pouvez réessayer avec « Actualiser ».
+      </p>
+
       <!-- Header -->
       <div class="dashboard-header">
-        <h1 class="dashboard-title">Admin Dashboard</h1>
-        <div class="header-actions">
-          <!-- CanOrder Toggle Switch -->
-          <div class="can-order-toggle" :class="{ 'is-loading': isCanOrderLoading }">
-            <span class="toggle-label">Accepting Orders</span>
-            <label class="switch">
-              <input 
-                type="checkbox" 
-                :checked="canOrderData?.isEnabled" 
-                @change="toggleCanOrderStatus"
-                :disabled="isCanOrderLoading"
-              >
-              <span class="slider round">
-                <span class="slider-icon on">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                </span>
-                <span class="slider-icon off">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </span>
-              </span>
-            </label>
-            <span class="status-indicator" :class="canOrderData?.isEnabled ? 'active' : 'inactive'">
-              {{ canOrderData?.isEnabled ? 'Active' : 'Paused' }}
-            </span>
+        <div class="dashboard-heading">
+          <div class="dashboard-logo">
+            <img :src="sushiLogo" alt="D. Sushi">
           </div>
-
+          <div>
+            <p class="dashboard-eyebrow">D. SUSHI · ADMINISTRATION</p>
+            <h1 class="dashboard-title">Admin Dashboard</h1>
+            <p class="dashboard-subtitle">Gérez votre activité et vos commandes en un coup d’œil.</p>
+          </div>
+        </div>
+        <div class="header-actions">
           <button @click="refreshData" class="refresh-btn" :disabled="isRefreshing">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -44,6 +33,55 @@
           </button>
         </div>
       </div>
+
+      <section class="schedule-card">
+        <div class="mb-4">
+          <h2 class="text-lg font-bold text-gray-900">Créneaux de commande</h2>
+          <p class="mt-1 text-sm text-gray-600">Ajoutez les jours et heures que les clients pourront choisir au checkout.</p>
+        </div>
+
+        <form class="flex flex-col gap-3 sm:flex-row sm:items-end" @submit.prevent="addOrderTimeSlot">
+          <div class="flex-1">
+            <label for="new-order-time-slot" class="mb-1 block text-sm font-medium text-gray-700">Jour et heure</label>
+            <input
+              id="new-order-time-slot"
+              v-model="newOrderTimeSlot"
+              type="datetime-local"
+              :min="minimumOrderTimeSlot"
+              required
+              class="min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+            >
+          </div>
+          <button
+            type="submit"
+            :disabled="isAddingOrderTimeSlot || !newOrderTimeSlot"
+            class="inline-flex min-h-11 items-center justify-center rounded-lg bg-red-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ isAddingOrderTimeSlot ? 'Ajout...' : 'Ajouter le créneau' }}
+          </button>
+        </form>
+
+        <p v-if="orderTimeSlotsError" class="mt-3 text-sm text-red-700" role="alert">{{ orderTimeSlotsError }}</p>
+        <p v-else-if="isOrderTimeSlotsLoading" class="mt-4 text-sm text-gray-500">Chargement des créneaux...</p>
+        <p v-else-if="!orderTimeSlots.length" class="mt-4 text-sm text-gray-500">Aucun créneau à venir.</p>
+        <ul v-else class="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200">
+          <li
+            v-for="slot in orderTimeSlots"
+            :key="slot.slotId"
+            class="flex items-center justify-between gap-3 px-3 py-3"
+          >
+            <span class="text-sm font-medium text-gray-800">{{ formatOrderTimeSlot(slot.date, slot.time) }}</span>
+            <button
+              type="button"
+              :disabled="deletingOrderTimeSlotId === slot.slotId"
+              class="rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              @click="deleteOrderTimeSlot(slot.slotId)"
+            >
+              {{ deletingOrderTimeSlotId === slot.slotId ? 'Suppression...' : 'Supprimer' }}
+            </button>
+          </li>
+        </ul>
+      </section>
 
       <!-- Summary Cards -->
       <div class="summary-grid">
@@ -93,18 +131,6 @@
           <div class="stat-content">
             <p class="stat-label">Total Products</p>
             <p class="stat-value">{{ summary.totalProducts }}</p>
-          </div>
-        </div>
-
-        <div class="stat-card invoices">
-          <div class="stat-icon">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-          </div>
-          <div class="stat-content">
-            <p class="stat-label">Total Invoices</p>
-            <p class="stat-value">{{ summary.totalInvoices }}</p>
           </div>
         </div>
 
@@ -255,37 +281,16 @@
           </div>
         </div>
 
-        <!-- Recent Invoices -->
-        <div class="invoices-card">
-          <div class="card-header">
-            <h2>Recent Invoices</h2>
-          </div>
-          <div class="invoices-list">
-            <div v-for="invoice in invoiceSummary.recent" :key="invoice.invoiceId" class="invoice-item">
-              <div class="invoice-info">
-                <p class="invoice-number">{{ invoice.invoiceNumber }}</p>
-                <p class="invoice-date">{{ formatDate(invoice.invoiceDate) }}</p>
-              </div>
-              <div class="invoice-actions">
-                <span class="invoice-amount">{{ formatCurrency(invoice.amount) }}</span>
-                <a v-if="invoice.pdfUrl" :href="api(invoice.pdfUrl)" target="_blank" class="download-btn">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuth } from '../../stores/auth.js'
-import { api, resolveImage, API_BASE, useProxy } from '../../utils/api.js'
+import { api, resolveImage } from '../../utils/api.js'
+import sushiLogo from '../../assets/sushilogopc.png'
 
 const { user } = useAuth()
 
@@ -298,17 +303,25 @@ const headers = () => ({
 // State
 const isLoading = ref(true)
 const isRefreshing = ref(false)
-const isCanOrderLoading = ref(false)
+const dashboardLoadTimedOut = ref(false)
+const isOrderTimeSlotsLoading = ref(false)
+const isAddingOrderTimeSlot = ref(false)
+const deletingOrderTimeSlotId = ref(null)
+const newOrderTimeSlot = ref('')
+const orderTimeSlots = ref([])
+const orderTimeSlotsError = ref('')
+const minimumOrderTimeSlot = (() => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+})()
 
 // Data
-const canOrderData = ref(null)
 const summary = ref({
   totalRevenue: 0,
   totalOrders: 0,
   totalCustomers: 0,
   totalProducts: 0,
   lowStockCount: 0,
-  totalInvoices: 0,
   unpaidOrders: 0
 })
 
@@ -324,11 +337,6 @@ const orderStatusCounts = ref([])
 const topProducts = ref([])
 const lowStockProducts = ref([])
 const topCustomers = ref([])
-const invoiceSummary = ref({
-  count: 0,
-  totalAmount: 0,
-  recent: []
-})
 const userCounts = ref({
   customers: 0,
   admins: 0,
@@ -473,69 +481,160 @@ const loadTopCustomers = async () => {
   }
 }
 
-// Load invoice summary
-const loadInvoiceSummary = async () => {
+const loadUserCounts = async () => {
   try {
-    const res = await fetch(api('/api/Admin/invoices/summary'), { headers: headers() })
-    if (!res.ok) throw new Error('fetch invoice summary failed')
-    invoiceSummary.value = await res.json()
-  } catch (e) {
-    console.error('Error loading invoice summary:', e)
+    const response = await fetch(api('/api/Users'), { headers: headers() })
+    if (!response.ok) throw new Error(`fetch users failed (HTTP ${response.status})`)
+
+    const users = await response.json()
+    if (!Array.isArray(users)) throw new Error('Invalid users response')
+
+    const admins = users.filter(user => String(user.role || '').toLowerCase() === 'admin').length
+    userCounts.value = {
+      customers: users.length - admins,
+      admins,
+      total: users.length
+    }
+  } catch (error) {
+    console.error('Error loading user counts:', error)
   }
 }
 
-// Load CanOrder status
-const loadCanOrder = async () => {
+const formatOrderTimeSlot = (day, time) => {
+  const date = new Date(`${day}T${time}`)
+  if (!day || !time || !Number.isFinite(date.getTime())) return 'Date de créneau invalide'
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
+const loadOrderTimeSlots = async () => {
+  isOrderTimeSlotsLoading.value = true
+  orderTimeSlotsError.value = ''
   try {
-    isCanOrderLoading.value = true
-    const res = await fetch(api('/api/CanOrder'), { headers: headers() })
-    if (!res.ok) throw new Error('fetch CanOrder failed')
-    canOrderData.value = await res.json()
-  } catch (e) {
-    console.error('Error loading CanOrder status:', e)
+    const response = await fetch(api('/api/CanOrder/slots'), { headers: headers() })
+    if (response.status === 404) {
+      orderTimeSlotsError.value = 'La gestion des créneaux n’est pas encore disponible sur le serveur. Vérifiez le déploiement du backend.'
+      throw new Error('fetch order time slots failed (HTTP 404)')
+    }
+    if (!response.ok) throw new Error(`fetch order time slots failed (HTTP ${response.status})`)
+    const slots = await response.json()
+    if (!Array.isArray(slots)) throw new Error('Invalid order time slots response')
+    const normalizedSlots = slots.map(slot => ({
+      slotId: slot?.slotId ?? slot?.orderTimeSlotId ?? slot?.OrderTimeSlotId,
+      date: slot?.date ?? slot?.Date,
+      time: slot?.time ?? slot?.Time
+    }))
+    orderTimeSlots.value = normalizedSlots.filter(slot =>
+      slot.slotId && slot.date && slot.time && Number.isFinite(new Date(`${slot.date}T${slot.time}`).getTime())
+    )
+    if (orderTimeSlots.value.length !== slots.length) {
+      orderTimeSlotsError.value = 'Le serveur a renvoyé un créneau avec une date invalide. Les créneaux valides restent affichés.'
+      console.error('Invalid order time slot data received:', slots.filter((_, index) =>
+        !orderTimeSlots.value.some(validSlot => validSlot.slotId === normalizedSlots[index].slotId)
+      ))
+    }
+  } catch (error) {
+    orderTimeSlots.value = []
+    if (!orderTimeSlotsError.value) {
+      orderTimeSlotsError.value = 'Impossible de charger les créneaux.'
+    }
+    console.error('Error loading order time slots:', error)
   } finally {
-    isCanOrderLoading.value = false
+    isOrderTimeSlotsLoading.value = false
   }
 }
 
-// Toggle CanOrder status
-const toggleCanOrderStatus = async () => {
-  if (!canOrderData.value || isCanOrderLoading.value) return
+const addOrderTimeSlot = async () => {
+  if (!newOrderTimeSlot.value || isAddingOrderTimeSlot.value) return
+  const [date, timePart] = newOrderTimeSlot.value.split('T')
+  const time = timePart ? `${timePart}:00` : ''
+  const scheduledAt = new Date(`${date}T${timePart}`)
+  if (!Number.isFinite(scheduledAt.getTime()) || scheduledAt <= new Date()) {
+    orderTimeSlotsError.value = 'Choisissez une date et une heure dans le futur.'
+    return
+  }
 
-  const newStatus = !canOrderData.value.isEnabled
+  isAddingOrderTimeSlot.value = true
+  orderTimeSlotsError.value = ''
   try {
-    isCanOrderLoading.value = true
-    const res = await fetch(api('/api/CanOrder'), {
-      method: 'PUT',
+    const response = await fetch(api('/api/CanOrder/slots'), {
+      method: 'POST',
       headers: {
         ...headers(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        isEnabled: newStatus,
-        onDate: new Date().toISOString(),
-        offDate: new Date().toISOString()
-      })
+      body: JSON.stringify({ date, time })
     })
+    if (!response.ok) {
+      const responseBody = await response.text()
+      if (response.status === 409) {
+        orderTimeSlotsError.value = 'Ce créneau existe déjà.'
+      } else if (response.status === 401 || response.status === 403) {
+        orderTimeSlotsError.value = 'Votre session administrateur a expiré ou ne permet pas cette action.'
+      } else if (response.status === 404) {
+        orderTimeSlotsError.value = 'Le serveur ne reconnaît pas encore la gestion des créneaux. Déployez la mise à jour du backend.'
+      } else {
+        let details = responseBody
+        try {
+          const parsedBody = JSON.parse(responseBody)
+          const validationErrors = parsedBody.errors
+            ? Object.values(parsedBody.errors).flat().join(' ')
+            : ''
+          details = parsedBody.detail || parsedBody.message || validationErrors || parsedBody.title || responseBody
+        } catch {
+          // The backend may return a plain-text error instead of JSON.
+        }
+        orderTimeSlotsError.value = details
+          ? `Impossible d’ajouter le créneau (HTTP ${response.status}) : ${details}`
+          : `Impossible d’ajouter le créneau (HTTP ${response.status}).`
+      }
+      console.error('Error adding order time slot:', response.status, responseBody)
+      return
+    }
 
-    if (!res.ok) throw new Error('Update CanOrder failed')
-    
-    // Refresh data after update
-    await loadCanOrder()
-  } catch (e) {
-    console.error('Error toggling CanOrder status:', e)
-    // Revert UI on failure if we had optimistic UI (not used here for safety)
+    newOrderTimeSlot.value = ''
+    await loadOrderTimeSlots()
+  } catch (error) {
+    orderTimeSlotsError.value = 'Le serveur est injoignable. Vérifiez votre connexion et réessayez.'
+    console.error('Error adding order time slot:', error)
   } finally {
-    isCanOrderLoading.value = false
+    isAddingOrderTimeSlot.value = false
+  }
+}
+
+const deleteOrderTimeSlot = async slotId => {
+  if (deletingOrderTimeSlotId.value) return
+  deletingOrderTimeSlotId.value = slotId
+  orderTimeSlotsError.value = ''
+  try {
+    const response = await fetch(api(`/api/CanOrder/slots/${slotId}`), {
+      method: 'DELETE',
+      headers: headers()
+    })
+    if (!response.ok) throw new Error('delete order time slot failed')
+    orderTimeSlots.value = orderTimeSlots.value.filter(slot => slot.slotId !== slotId)
+  } catch (error) {
+    orderTimeSlotsError.value = 'Impossible de supprimer ce créneau.'
+    console.error('Error deleting order time slot:', error)
+  } finally {
+    deletingOrderTimeSlotId.value = null
   }
 }
 
 // Load all data
 const loadAllData = async () => {
-  isLoading.value = true
+  dashboardLoadTimedOut.value = false
+  let timeoutId
   try {
-    await Promise.all([
-      loadCanOrder(),
+    const requests = Promise.all([
+      loadOrderTimeSlots(),
       loadSummary(),
       loadRevenue(),
       loadRecentOrders(),
@@ -543,12 +642,21 @@ const loadAllData = async () => {
       loadTopProducts(),
       loadLowStock(),
       loadTopCustomers(),
-      loadInvoiceSummary(),
       loadUserCounts()
+    ])
+    await Promise.race([
+      requests,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Dashboard data loading timed out')), 12000)
+      })
     ])
   } catch (e) {
     console.error('Error loading dashboard data:', e)
+    if (e instanceof Error && e.message === 'Dashboard data loading timed out') {
+      dashboardLoadTimedOut.value = true
+    }
   } finally {
+    if (timeoutId) clearTimeout(timeoutId)
     isLoading.value = false
   }
 }
@@ -636,146 +744,10 @@ onMounted(loadAllData)
   cursor: not-allowed;
 }
 
-/* CanOrder Toggle */
 .header-actions {
   display: flex;
   align-items: center;
   gap: 2rem;
-}
-
-.can-order-toggle {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 1rem;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-}
-
-.can-order-toggle:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.toggle-label {
-  color: white;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.status-indicator {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-}
-
-.status-indicator.active {
-  background: #10b981;
-  color: white;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-}
-
-.status-indicator.inactive {
-  background: #ef4444;
-  color: white;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-}
-
-/* Switch Styles */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #4b5563;
-  transition: .4s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 5px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-input:checked + .slider {
-  background-color: #10b981;
-}
-
-input:focus + .slider {
-  box-shadow: 0 0 1px #10b981;
-}
-
-input:checked + .slider:before {
-  transform: translateX(22px);
-}
-
-.slider.round {
-  border-radius: 34px;
-}
-
-.slider.round:before {
-  border-radius: 50%;
-}
-
-.slider-icon {
-  width: 14px;
-  height: 14px;
-  color: white;
-  z-index: 1;
-}
-
-.slider-icon.on {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.slider-icon.off {
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-input:checked + .slider .slider-icon.on {
-  opacity: 1;
-}
-
-input:checked + .slider .slider-icon.off {
-  opacity: 0;
-}
-
-.is-loading {
-  opacity: 0.7;
-  pointer-events: none;
 }
 
 /* Summary Cards */
@@ -834,11 +806,6 @@ input:checked + .slider .slider-icon.off {
 
 .stat-card.products .stat-icon {
   background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  color: white;
-}
-
-.stat-card.invoices .stat-icon {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
   color: white;
 }
 
@@ -907,8 +874,7 @@ input:checked + .slider .slider-icon.off {
 .orders-card,
 .products-card,
 .low-stock-card,
-.customers-card,
-.invoices-card {
+.customers-card {
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
@@ -924,8 +890,7 @@ input:checked + .slider .slider-icon.off {
 .orders-table,
 .products-list,
 .low-stock-list,
-.customers-list,
-.invoices-list {
+.customers-list {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
@@ -937,8 +902,7 @@ input:checked + .slider .slider-icon.off {
 .orders-table::-webkit-scrollbar,
 .products-list::-webkit-scrollbar,
 .low-stock-list::-webkit-scrollbar,
-.customers-list::-webkit-scrollbar,
-.invoices-list::-webkit-scrollbar {
+.customers-list::-webkit-scrollbar {
   width: 6px;
 }
 
@@ -947,8 +911,7 @@ input:checked + .slider .slider-icon.off {
 .orders-table::-webkit-scrollbar-track,
 .products-list::-webkit-scrollbar-track,
 .low-stock-list::-webkit-scrollbar-track,
-.customers-list::-webkit-scrollbar-track,
-.invoices-list::-webkit-scrollbar-track {
+.customers-list::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 10px;
 }
@@ -958,8 +921,7 @@ input:checked + .slider .slider-icon.off {
 .orders-table::-webkit-scrollbar-thumb,
 .products-list::-webkit-scrollbar-thumb,
 .low-stock-list::-webkit-scrollbar-thumb,
-.customers-list::-webkit-scrollbar-thumb,
-.invoices-list::-webkit-scrollbar-thumb {
+.customers-list::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 10px;
 }
@@ -969,8 +931,7 @@ input:checked + .slider .slider-icon.off {
 .orders-table::-webkit-scrollbar-thumb:hover,
 .products-list::-webkit-scrollbar-thumb:hover,
 .low-stock-list::-webkit-scrollbar-thumb:hover,
-.customers-list::-webkit-scrollbar-thumb:hover,
-.invoices-list::-webkit-scrollbar-thumb:hover {
+.customers-list::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
@@ -1284,66 +1245,6 @@ input:checked + .slider .slider-icon.off {
   font-weight: 700;
 }
 
-/* Invoices List */
-.invoices-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.invoice-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f9fafb;
-  border-radius: 0.75rem;
-  transition: background 0.3s;
-}
-
-.invoice-item:hover {
-  background: #f3f4f6;
-}
-
-.invoice-info {
-  flex: 1;
-}
-
-.invoice-number {
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.25rem 0;
-}
-
-.invoice-date {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 0;
-}
-
-.invoice-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.invoice-amount {
-  font-weight: 700;
-  color: #667eea;
-}
-
-.download-btn {
-  color: #667eea;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: all 0.3s;
-}
-
-.download-btn:hover {
-  background: #e0e7ff;
-  color: #4f46e5;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-container {
@@ -1364,6 +1265,475 @@ input:checked + .slider .slider-icon.off {
 
   .bar-chart {
     height: 150px;
+  }
+}
+
+.dashboard-container {
+  min-height: 100vh;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(190, 33, 38, 0.08), transparent 34rem),
+    #f6f5f2;
+  color: #201d1b;
+}
+
+.dashboard-content {
+  max-width: 1560px;
+}
+
+.dashboard-header {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  background: linear-gradient(115deg, #171514 0%, #292422 72%, #3a201f 100%);
+  box-shadow: 0 18px 45px rgba(44, 30, 26, 0.16);
+}
+
+.dashboard-header::after {
+  position: absolute;
+  right: -3rem;
+  bottom: -7rem;
+  width: 18rem;
+  height: 18rem;
+  border: 1px solid rgba(213, 54, 55, 0.24);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2rem rgba(213, 54, 55, 0.04), 0 0 0 4rem rgba(213, 54, 55, 0.03);
+  content: "";
+  pointer-events: none;
+}
+
+.dashboard-heading {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  min-width: 0;
+}
+
+.dashboard-logo {
+  display: grid;
+  width: clamp(5.5rem, 12vw, 8rem);
+  height: 4.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0.65rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dashboard-eyebrow {
+  margin: 0 0 0.25rem;
+  color: #f08a83;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.dashboard-title {
+  color: #fff;
+  font-size: clamp(1.55rem, 3.5vw, 2.25rem);
+  line-height: 1.1;
+  text-shadow: none;
+}
+
+.dashboard-subtitle {
+  margin: 0.45rem 0 0;
+  color: #d4ceca;
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  z-index: 1;
+  flex: 0 0 auto;
+}
+
+.refresh-btn {
+  min-height: 2.8rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #c92d32;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(151, 26, 30, 0.28);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #ad2328;
+  box-shadow: 0 10px 22px rgba(151, 26, 30, 0.34);
+}
+
+.schedule-card,
+.stat-card,
+.chart-card,
+.status-card,
+.orders-card,
+.products-card,
+.low-stock-card,
+.customers-card {
+  border: 1px solid #eae6e1;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(49, 38, 33, 0.055);
+}
+
+.schedule-card {
+  margin-bottom: 1.5rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-radius: 1rem;
+}
+
+.schedule-card h2 {
+  color: #241f1d;
+}
+
+.schedule-card input[type="datetime-local"],
+.date-input {
+  min-height: 2.8rem;
+  border: 1px solid #e2ddd7;
+  border-radius: 0.65rem;
+  background-color: #fffdfa;
+  color: #26211f;
+}
+
+.schedule-card input[type="datetime-local"]:focus,
+.date-input:focus {
+  border-color: #c92d32;
+  outline: 3px solid rgba(201, 45, 50, 0.12);
+}
+
+.schedule-card button[type="submit"] {
+  background: #c92d32;
+}
+
+.schedule-card button[type="submit"]:hover:not(:disabled) {
+  background: #ad2328;
+}
+
+.schedule-card ul {
+  border-color: #eee9e4;
+}
+
+.schedule-card li + li {
+  border-color: #f0ece8;
+}
+
+.summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.2rem;
+  border-radius: 1rem;
+  box-shadow: 0 7px 22px rgba(49, 38, 33, 0.05);
+}
+
+.stat-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #c92d32;
+  content: "";
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(49, 38, 33, 0.1);
+}
+
+.stat-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
+  background: #f9e9e7 !important;
+  color: #b52228 !important;
+}
+
+.stat-icon svg {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.stat-label {
+  color: #77716d;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.stat-value {
+  overflow: hidden;
+  color: #221e1c;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  text-overflow: ellipsis;
+}
+
+.stat-sublabel {
+  color: #8c8580;
+}
+
+.main-grid {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+  gap: 1rem;
+}
+
+.chart-card,
+.status-card,
+.orders-card,
+.products-card,
+.low-stock-card,
+.customers-card {
+  min-width: 0;
+  max-height: 540px;
+  padding: clamp(1rem, 2vw, 1.4rem);
+  border-radius: 1rem;
+  box-shadow: 0 8px 26px rgba(49, 38, 33, 0.055);
+}
+
+.orders-card {
+  grid-column: 1 / -1;
+}
+
+.card-header {
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #eee9e4;
+}
+
+.card-header h2 {
+  color: #241f1d;
+  font-size: 1.08rem;
+}
+
+.date-range {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: #807873;
+  font-size: 0.76rem;
+}
+
+.date-input {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.revenue-total {
+  color: #b52228;
+  font-size: 1.1rem;
+}
+
+.bar-chart {
+  gap: 0.55rem;
+}
+
+.bar {
+  background: linear-gradient(180deg, #e05555 0%, #b52228 100%);
+  border-radius: 0.45rem 0.45rem 0.15rem 0.15rem;
+}
+
+.bar-label,
+.bar-value {
+  font-size: 0.68rem;
+}
+
+.chart-content::-webkit-scrollbar-thumb,
+.status-list::-webkit-scrollbar-thumb,
+.orders-table::-webkit-scrollbar-thumb,
+.products-list::-webkit-scrollbar-thumb,
+.low-stock-list::-webkit-scrollbar-thumb,
+.customers-list::-webkit-scrollbar-thumb {
+  background: #d5cdc6;
+}
+
+.chart-content::-webkit-scrollbar-thumb:hover,
+.status-list::-webkit-scrollbar-thumb:hover,
+.orders-table::-webkit-scrollbar-thumb:hover,
+.products-list::-webkit-scrollbar-thumb:hover,
+.low-stock-list::-webkit-scrollbar-thumb:hover,
+.customers-list::-webkit-scrollbar-thumb:hover {
+  background: #b9aea6;
+}
+
+.status-item,
+.product-item,
+.customer-item {
+  border: 1px solid #f0ece8;
+  background: #fbfaf8;
+}
+
+.status-item:hover,
+.product-item:hover,
+.customer-item:hover {
+  background: #f7f2ee;
+}
+
+.status-badge {
+  border-radius: 999px;
+}
+
+.status-pending {
+  background: #fff2d7;
+  color: #8a5a0a;
+}
+
+.status-confirmed {
+  background: #fce8e6;
+  color: #a4252a;
+}
+
+.status-preparing {
+  background: #f4e9e7;
+  color: #763a36;
+}
+
+.status-ready {
+  background: #fbe3e3;
+  color: #9d2930;
+}
+
+.status-delivered {
+  background: #e8f2e8;
+  color: #3c6542;
+}
+
+.status-revenue,
+.orders-table .amount {
+  color: #aa2429;
+}
+
+.orders-table th {
+  border-bottom: 1px solid #eae5df;
+  color: #77716d;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.orders-table td {
+  border-bottom-color: #f0ece8;
+}
+
+.orders-table tr:hover {
+  background: #fbf7f4;
+}
+
+.icon-btn {
+  color: #b52228;
+}
+
+.icon-btn:hover {
+  background: #f9e9e7;
+  color: #8f191f;
+}
+
+.product-rank,
+.customer-rank {
+  border-radius: 0.7rem;
+  background: #f9e9e7;
+  color: #ae242a;
+}
+
+.low-stock-item {
+  border: 1px solid #f1d9bc;
+  border-left: 4px solid #cc762a;
+  background: #fff8ef;
+}
+
+.alert-header {
+  border-bottom-color: #f1e1d0;
+}
+
+.alert-count {
+  background: #fff0dc;
+  color: #8e531d;
+}
+
+.stock-low {
+  color: #b52228;
+}
+
+@media (max-width: 900px) {
+  .main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .orders-card {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions,
+  .refresh-btn {
+    width: 100%;
+  }
+
+  .refresh-btn {
+    justify-content: center;
+  }
+
+  .dashboard-logo {
+    width: 5rem;
+    height: 3.7rem;
+    padding: 0.5rem;
+  }
+
+  .dashboard-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .stat-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .stat-icon {
+    width: 2.55rem;
+    height: 2.55rem;
+  }
+
+  .stat-value {
+    font-size: 1.35rem;
+  }
+
+  .card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .date-range {
+    justify-content: flex-start;
   }
 }
 </style>

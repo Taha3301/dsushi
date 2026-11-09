@@ -1,4 +1,16 @@
 <script setup>
+import { onMounted } from 'vue'
+import { useOrderTimeSlots } from '../composables/useOrderTimeSlots.js'
+
+const {
+  upcomingOrderTimeSlots,
+  isOrderTimeSlotsLoading,
+  orderTimeSlotsError,
+  formatOrderTimeSlot,
+  loadOrderTimeSlots
+} = useOrderTimeSlots()
+
+onMounted(loadOrderTimeSlots)
 </script>
 
 <template>
@@ -69,7 +81,12 @@
           <div class="mt-0">
             <h5 class="text-sm font-semibold mb-3 text-white">Horaires</h5>
             <div class="space-y-1 text-sm text-gray-300">
-              <p>Samedi: 18h - 21h</p>
+              <p v-if="isOrderTimeSlotsLoading">Chargement des créneaux...</p>
+              <p v-else-if="orderTimeSlotsError">Les dates seront bientôt annoncées.</p>
+              <p v-else-if="!upcomingOrderTimeSlots.length">Aucun créneau à venir.</p>
+              <p v-else v-for="slot in upcomingOrderTimeSlots" :key="slot.key">
+                {{ formatOrderTimeSlot(slot) }}
+              </p>
             </div>
           </div>
         </div>
